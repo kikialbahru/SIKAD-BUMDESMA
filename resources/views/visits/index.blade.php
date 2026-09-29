@@ -68,29 +68,29 @@
                                 @csrf
                                 <div class="col-md-6">
                                     <label class="form-label small" for="visit-title">Judul kunjungan</label>
-                                    <input class="form-control @error('title') is-invalid @enderror" id="visit-title" name="title" value="{{ old('title') }}" maxlength="255" placeholder="cth. Kunjungan ke kelompok tani Desa Tarub" required>
-                                    @error('title')
+                                    <input class="form-control @error('judul') is-invalid @enderror" id="visit-title" name="judul" value="{{ old('judul') }}" maxlength="255" placeholder="cth. Kunjungan ke kelompok tani Desa Tarub" required>
+                                    @error('judul')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>
                                 <div class="col-12">
                                     <label class="form-label small" for="visit-description">Deskripsi <span class="text-secondary">(opsional)</span></label>
-                                    <textarea class="form-control @error('description') is-invalid @enderror" id="visit-description" name="description" rows="2" maxlength="2000" placeholder="cth. Bertemu ketua kelompok tani, membahas bantuan bibit">{{ old('description') }}</textarea>
-                                    @error('description')
+                                    <textarea class="form-control @error('deskripsi') is-invalid @enderror" id="visit-description" name="deskripsi" rows="2" maxlength="2000" placeholder="cth. Bertemu ketua kelompok tani, membahas bantuan bibit">{{ old('deskripsi') }}</textarea>
+                                    @error('deskripsi')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>
                                 <div class="col-md-3">
                                     <label class="form-label small" for="visit-date">Tanggal kunjungan</label>
-                                    <input class="form-control @error('visit_date') is-invalid @enderror" id="visit-date" name="visit_date" type="date" value="{{ old('visit_date', now()->toDateString()) }}" max="{{ now()->toDateString() }}" required>
-                                    @error('visit_date')
+                                    <input class="form-control @error('tanggal') is-invalid @enderror" id="visit-date" name="tanggal" type="date" value="{{ old('tanggal', now()->toDateString()) }}" max="{{ now()->toDateString() }}" required>
+                                    @error('tanggal')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>
                                 <div class="col-md-3">
                                     <label class="form-label small" for="visit-photo">Foto kunjungan</label>
-                                    <input class="form-control @error('photo') is-invalid @enderror" id="visit-photo" name="photo" type="file" accept="image/jpeg,image/png,image/webp" required>
-                                    @error('photo')
+                                    <input class="form-control @error('foto') is-invalid @enderror" id="visit-photo" name="foto" type="file" accept="image/jpeg,image/png,image/webp" required>
+                                    @error('foto')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                     <div class="form-text">JPG/PNG/WebP, maks 2 MB.</div>
@@ -107,10 +107,10 @@
                                             <i class="bi bi-crosshair me-1"></i>Ambil Lokasi Saat Ini
                                         </button>
                                     </div>
-                                    <input type="hidden" name="latitude" data-role="input-lat" value="{{ old('latitude') }}">
-                                    <input type="hidden" name="longitude" data-role="input-lng" value="{{ old('longitude') }}">
-                                    <input type="hidden" name="accuracy" data-role="input-acc" value="{{ old('accuracy') }}">
-                                    @error('latitude')
+                                    <input type="hidden" name="lintang" data-role="input-lat" value="{{ old('lintang') }}">
+                                    <input type="hidden" name="bujur" data-role="input-lng" value="{{ old('bujur') }}">
+                                    <input type="hidden" name="akurasi" data-role="input-acc" value="{{ old('akurasi') }}">
+                                    @error('lintang')
                                         <div class="text-danger small mt-1">Lokasi GPS wajib diambil sebelum menyimpan.</div>
                                     @enderror
                                 </div>
@@ -134,11 +134,11 @@
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label small">Karyawan</label>
-                                <select class="form-select" name="employee_id">
+                                <select class="form-select" name="karyawan_id">
                                     <option value="">Semua karyawan</option>
                                     @foreach ($employees as $employee)
-                                        <option value="{{ $employee->id }}" @selected((string) ($filters['employee_id'] ?? '') === (string) $employee->id)>
-                                            {{ $employee->employee_code }} — {{ $employee->user?->name }}
+                                        <option value="{{ $employee->id }}" @selected((string) ($filters['karyawan_id'] ?? '') === (string) $employee->id)>
+                                            {{ $employee->kode_karyawan }} — {{ $employee->user?->name }}
                                         </option>
                                     @endforeach
                                 </select>
@@ -200,7 +200,7 @@
             @if($mapPoints->isNotEmpty())
                 <div id="visitsMap" style="height:380px;border-radius:.9rem;z-index:0"></div>
                 <p class="text-secondary small mb-0 mt-2">Menampilkan {{ $mapPoints->count() }} titik kunjungan berkoordinat pada filter bulan ini. Klik pin untuk detail.</p>
-            @elseif(auth()->user()->isAdmin() && empty($filters['employee_id']))
+            @elseif(auth()->user()->isAdmin() && empty($filters['karyawan_id']))
                 <div class="alert alert-info mb-0">Lokasi kunjungan bersifat per karyawan — pilih satu karyawan pada filter untuk melihat peta sebarannya.</div>
             @else
                 <div class="alert alert-secondary mb-0">Belum ada titik lokasi pada filter ini.</div>
@@ -229,25 +229,25 @@
                             @if(auth()->user()->isAdmin())
                                 <td>
                                     <strong>{{ $visit->employee?->user?->name ?? '-' }}</strong>
-                                    <small class="d-block text-secondary">{{ $visit->employee?->employee_code }}</small>
+                                    <small class="d-block text-secondary">{{ $visit->employee?->kode_karyawan }}</small>
                                 </td>
                             @endif
                             <td>
-                                <strong>{{ $visit->title }}</strong>
-                                @if($visit->description)
-                                    <small class="d-block text-secondary">{{ \Illuminate\Support\Str::limit($visit->description, 80) }}</small>
+                                <strong>{{ $visit->judul }}</strong>
+                                @if($visit->deskripsi)
+                                    <small class="d-block text-secondary">{{ \Illuminate\Support\Str::limit($visit->deskripsi, 80) }}</small>
                                 @endif
                             </td>
-                            <td>{{ $visit->visit_date->translatedFormat('d M Y') }}</td>
+                            <td>{{ $visit->tanggal->translatedFormat('d M Y') }}</td>
                             <td>
-                                <a href="{{ asset('storage/' . $visit->photo) }}" target="_blank" title="Lihat foto">
-                                    <img src="{{ asset('storage/' . $visit->photo) }}" width="48" height="48" class="rounded border" style="object-fit:cover" alt="Foto kunjungan">
+                                <a href="{{ asset('storage/' . $visit->foto) }}" target="_blank" title="Lihat foto">
+                                    <img src="{{ asset('storage/' . $visit->foto) }}" width="48" height="48" class="rounded border" style="object-fit:cover" alt="Foto kunjungan">
                                 </a>
                             </td>
                             <td>
-                                @if($showLocation && $visit->latitude && $visit->longitude)
+                                @if($showLocation && $visit->lintang && $visit->bujur)
                                     <a class="text-decoration-none small" href="{{ route('visits.show', $visit) }}" title="Lihat di peta">
-                                        <i class="bi bi-geo-alt-fill text-danger me-1"></i>{{ number_format($visit->latitude, 5) }}, {{ number_format($visit->longitude, 5) }}
+                                        <i class="bi bi-geo-alt-fill text-danger me-1"></i>{{ number_format($visit->lintang, 5) }}, {{ number_format($visit->bujur, 5) }}
                                     </a>
                                 @else
                                     <span class="text-secondary small">-</span>

@@ -6,7 +6,9 @@ use Illuminate\Database\Eloquent\Model;
 
 class Holiday extends Model
 {
-    protected $fillable = ['holiday_date', 'name'];
+    protected $table = 'hari_libur';
 
-    protected $casts = ['holiday_date' => 'date'];
+    protected $fillable = ['tanggal', 'nama'];
+
+    protected $casts = ['tanggal' => 'date'];
 }

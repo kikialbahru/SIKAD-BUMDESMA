@@ -60,30 +60,30 @@
                     <tr>
                         <td>
                             <strong>
-                                {{ $location->name }}
-                            </strong>@if($location->address)
+                                {{ $location->nama }}
+                            </strong>@if($location->alamat)
                                 <small class="d-block text-secondary">
-                                    {{ $location->address }}
+                                    {{ $location->alamat }}
                                 </small>
-                            @endif @unless($location->enforce_radius)
+                            @endif @unless($location->wajib_radius)
                                 <span class="badge text-bg-warning">Radius masuk tidak ditegakkan</span>
-                            @endunless @unless($location->enforce_checkout_radius)
+                            @endunless @unless($location->wajib_radius_pulang)
                                 <span class="badge text-bg-info">Pulang boleh dari lapangan</span>
                             @endunless
                         </td>
                         <td class="small">
-                            {{ number_format($location->latitude, 6) }}, {{ number_format($location->longitude, 6) }}
+                            {{ number_format($location->lintang, 6) }}, {{ number_format($location->bujur, 6) }}
                         </td>
                         <td class="small">
-                            {{ $location->radius_meters }} m / ±{{ $location->max_accuracy_meters }} m</td>
-                        <td>@if($location->is_active)
+                            {{ $location->radius_meter }} m / ±{{ $location->maks_akurasi_meter }} m</td>
+                        <td>@if($location->aktif)
                                 <span class="badge text-bg-success">Aktif</span>
                             @else
                             <span class="badge text-bg-secondary">Nonaktif</span>
                         @endif
                         </td>
                         <td class="text-end text-nowrap">
-                            @unless($location->is_active)
+                            @unless($location->aktif)
                             <form class="d-inline" method="POST" action="{{ route('attendance.locations.activate', $location) }}">@csrf @method('PATCH')
                                 <button class="btn btn-sm btn-outline-success" type="submit" title="Aktifkan">
                                     <i class="bi bi-check-circle">
@@ -100,7 +100,7 @@
                             <i class="bi bi-pencil">
                             </i>
                             </button>
-                            <form class="d-inline" method="POST" action="{{ route('attendance.locations.destroy', $location) }}" data-confirm="Hapus lokasi {{ $location->name }}?">@csrf @method('DELETE')
+                            <form class="d-inline" method="POST" action="{{ route('attendance.locations.destroy', $location) }}" data-confirm="Hapus lokasi {{ $location->nama }}?">@csrf @method('DELETE')
                                 <button class="btn btn-sm btn-outline-danger" type="submit" title="Hapus">
                                     <i class="bi bi-trash">
                                     </i>
@@ -135,8 +135,8 @@
                         <input
                             class="form-control"
                             id="loc_name"
-                            name="name"
-                            value="{{ old('name', 'Kantor BUMDESMA LKD TARUB') }}"
+                            name="nama"
+                            value="{{ old('nama', 'Kantor BUMDESMA LKD TARUB') }}"
                             required
                             maxlength="100">
                     </div>
@@ -145,8 +145,8 @@
                         <input
                             class="form-control"
                             id="loc_address"
-                            name="address"
-                            value="{{ old('address') }}"
+                            name="alamat"
+                            value="{{ old('alamat') }}"
                             maxlength="255"
                             placeholder="cth. Jl. Raya Tarub, Tegal">
                     </div>
@@ -156,8 +156,8 @@
                             <input
                                 class="form-control"
                                 id="loc_lat"
-                                name="latitude"
-                                value="{{ old('latitude') }}"
+                                name="lintang"
+                                value="{{ old('lintang') }}"
                                 required
                                 inputmode="decimal"
                                 placeholder="-6.xxxxxx">
@@ -167,8 +167,8 @@
                             <input
                                 class="form-control"
                                 id="loc_lng"
-                                name="longitude"
-                                value="{{ old('longitude') }}"
+                                name="bujur"
+                                value="{{ old('bujur') }}"
                                 required
                                 inputmode="decimal"
                                 placeholder="109.xxxxxx">
@@ -185,8 +185,8 @@
                                 class="form-control"
                                 id="loc_radius"
                                 type="number"
-                                name="radius_meters"
-                                value="{{ old('radius_meters', 100) }}"
+                                name="radius_meter"
+                                value="{{ old('radius_meter', 100) }}"
                                 min="10"
                                 max="5000"
                                 required>
@@ -198,8 +198,8 @@
                                 class="form-control"
                                 id="loc_acc"
                                 type="number"
-                                name="max_accuracy_meters"
-                                value="{{ old('max_accuracy_meters', 100) }}"
+                                name="maks_akurasi_meter"
+                                value="{{ old('maks_akurasi_meter', 100) }}"
                                 min="10"
                                 max="1000"
                                 required>
@@ -210,7 +210,7 @@
                             class="form-check-input"
                             type="checkbox"
                             id="loc_enforce"
-                            name="enforce_radius"
+                            name="wajib_radius"
                             value="1"
                             checked>
                         <label class="form-check-label" for="loc_enforce">Tegakkan batas radius <strong>absen masuk</strong> (tolak absen di luar area)
@@ -221,7 +221,7 @@
                             class="form-check-input"
                             type="checkbox"
                             id="loc_enforce_out"
-                            name="enforce_checkout_radius"
+                            name="wajib_radius_pulang"
                             value="1">
                         <label class="form-check-label" for="loc_enforce_out">Tegakkan batas radius <strong>absen pulang</strong> (matikan jika karyawan boleh pulang dari lapangan)
                         </label>
@@ -241,7 +241,7 @@
     <div class="modal-dialog">
         <form class="modal-content" method="POST" action="{{ route('attendance.locations.update', $location) }}">@csrf @method('PUT')
         <div class="modal-header">
-            <h5 class="modal-title">Ubah Lokasi — {{ $location->name }}
+            <h5 class="modal-title">Ubah Lokasi — {{ $location->nama }}
             </h5>
             <button class="btn-close" type="button" data-bs-dismiss="modal">
             </button>
@@ -249,19 +249,19 @@
         <div class="modal-body">
             <div class="mb-3">
                 <label class="form-label">Nama Lokasi</label>
-                <input class="form-control" name="name" value="{{ $location->name }}" required maxlength="100">
+                <input class="form-control" name="nama" value="{{ $location->nama }}" required maxlength="100">
             </div>
             <div class="mb-3">
                 <label class="form-label">Alamat</label>
-                <input class="form-control" name="address" value="{{ $location->address }}" maxlength="255">
+                <input class="form-control" name="alamat" value="{{ $location->alamat }}" maxlength="255">
             </div>
             <div class="row g-3 mb-3">
                 <div class="col-6">
                     <label class="form-label">Latitude</label>
                     <input
                         class="form-control"
-                        name="latitude"
-                        value="{{ $location->latitude }}"
+                        name="lintang"
+                        value="{{ $location->lintang }}"
                         required
                         inputmode="decimal">
                 </div>
@@ -269,8 +269,8 @@
                     <label class="form-label">Longitude</label>
                     <input
                         class="form-control"
-                        name="longitude"
-                        value="{{ $location->longitude }}"
+                        name="bujur"
+                        value="{{ $location->bujur }}"
                         required
                         inputmode="decimal">
                 </div>
@@ -282,8 +282,8 @@
                     <input
                         class="form-control"
                         type="number"
-                        name="radius_meters"
-                        value="{{ $location->radius_meters }}"
+                        name="radius_meter"
+                        value="{{ $location->radius_meter }}"
                         min="10"
                         max="5000"
                         required>
@@ -294,8 +294,8 @@
                     <input
                         class="form-control"
                         type="number"
-                        name="max_accuracy_meters"
-                        value="{{ $location->max_accuracy_meters }}"
+                        name="maks_akurasi_meter"
+                        value="{{ $location->maks_akurasi_meter }}"
                         min="10"
                         max="1000"
                         required>
@@ -305,18 +305,18 @@
                 <input
                     class="form-check-input"
                     type="checkbox"
-                    name="enforce_radius"
+                    name="wajib_radius"
                     value="1"
-                    @checked($location->enforce_radius)>
+                    @checked($location->wajib_radius)>
                 <label class="form-check-label">Tegakkan batas radius absen masuk</label>
             </div>
             <div class="form-check form-switch mt-2">
                 <input
                     class="form-check-input"
                     type="checkbox"
-                    name="enforce_checkout_radius"
+                    name="wajib_radius_pulang"
                     value="1"
-                    @checked($location->enforce_checkout_radius)>
+                    @checked($location->wajib_radius_pulang)>
                 <label class="form-check-label">Tegakkan batas radius absen pulang</label>
             </div>
         </div>

@@ -15,7 +15,7 @@ class PurgeDemoEmployees extends Command
     public function handle(): int
     {
         $codes = ['KRY-001', 'KRY-002', 'KRY-003', 'KRY-004', 'KRY-005', 'KRY-006'];
-        $targets = Employee::whereIn('employee_code', $codes)->orderBy('employee_code')->get();
+        $targets = Employee::whereIn('kode_karyawan', $codes)->orderBy('kode_karyawan')->get();
 
         if ($targets->isEmpty()) {
             $this->info('Tidak ada karyawan demo (KRY-001 s/d KRY-006). Tidak ada yang dihapus.');
@@ -24,7 +24,7 @@ class PurgeDemoEmployees extends Command
         }
 
         foreach ($targets as $employee) {
-            $this->line("- {$employee->employee_code} ({$employee->display_name})");
+            $this->line("- {$employee->kode_karyawan} ({$employee->display_name})");
         }
 
         if (! $this->option('force') && ! $this->confirm("Nonaktifkan + hapus {$targets->count()} karyawan demo di atas?", false)) {
@@ -36,7 +36,7 @@ class PurgeDemoEmployees extends Command
         foreach ($targets as $employee) {
             // Sama seperti EmployeeController@destroy: riwayat (absensi/gaji/dll) tetap
             // tersimpan, dan login otomatis terkunci karena akun sudah tidak aktif.
-            $employee->update(['is_active' => false]);
+            $employee->update(['aktif' => false]);
             $employee->delete();
         }
 

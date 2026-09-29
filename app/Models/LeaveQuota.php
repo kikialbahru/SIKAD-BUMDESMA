@@ -6,11 +6,13 @@ use Illuminate\Database\Eloquent\Model;
 
 class LeaveQuota extends Model
 {
-    protected $fillable = ['year', 'quota_days'];
+    protected $table = 'kuota_cuti';
+
+    protected $fillable = ['tahun', 'jatah_hari'];
 
     public static function current(): self
     {
-        return static::firstOrCreate(['year' => (int) now()->format('Y')], ['quota_days' => 12]);
+        return static::firstOrCreate(['tahun' => (int) now()->format('Y')], ['jatah_hari' => 12]);
     }
 
     /**
@@ -20,13 +22,13 @@ class LeaveQuota extends Model
     public static function usage(Employee $employee, ?int $year = null): array
     {
         $year ??= (int) now()->format('Y');
-        $entitlement = static::firstOrCreate(['year' => $year], ['quota_days' => 12])->quota_days;
+        $entitlement = static::firstOrCreate(['tahun' => $year], ['jatah_hari' => 12])->jatah_hari;
 
-        $days = fn (string $status) => (int) LeaveRequest::where('employee_id', $employee->id)
-            ->where('type', 'leave')
+        $days = fn (string $status) => (int) LeaveRequest::where('karyawan_id', $employee->id)
+            ->where('jenis', 'leave')
             ->where('status', $status)
-            ->whereYear('start_date', $year)
-            ->sum('total_days');
+            ->whereYear('tanggal_mulai', $year)
+            ->sum('jumlah_hari');
 
         $used = $days('approved');
         $pending = $days('pending');

@@ -26,9 +26,9 @@ class AttendanceEvidenceTest extends TestCase
             'password' => Hash::make('password'),
         ]);
         Employee::create([
-            'user_id' => $user->id,
-            'employee_code' => 'KRY-'.substr(str_replace(['@', '.', '-'], '', $email), 0, 10),
-            'is_active' => true,
+            'pengguna_id' => $user->id,
+            'kode_karyawan' => 'KRY-'.substr(str_replace(['@', '.', '-'], '', $email), 0, 10),
+            'aktif' => true,
         ]);
 
         return $user;
@@ -46,12 +46,12 @@ class AttendanceEvidenceTest extends TestCase
         $user = $this->employeeUser();
 
         $response = $this->actingAs($user)->postJson('/attendance/check-in', [
-            'latitude' => -6.9,
-            'longitude' => 109.1,
-            'accuracy' => 10,
+            'lintang' => -6.9,
+            'bujur' => 109.1,
+            'akurasi' => 10,
         ]);
 
-        $response->assertStatus(422)->assertJsonValidationErrors('photo');
+        $response->assertStatus(422)->assertJsonValidationErrors('foto');
     }
 
     public function test_check_in_stores_photo_and_gps_with_server_time(): void
@@ -61,22 +61,22 @@ class AttendanceEvidenceTest extends TestCase
         $user = $this->employeeUser();
 
         $response = $this->actingAs($user)->postJson('/attendance/check-in', [
-            'photo' => $this->photo(),
-            'latitude' => -6.9,
-            'longitude' => 109.1,
-            'accuracy' => 10,
+            'foto' => $this->photo(),
+            'lintang' => -6.9,
+            'bujur' => 109.1,
+            'akurasi' => 10,
         ]);
 
         $response->assertOk()->assertJson(['ok' => true, 'type' => 'masuk']);
         $attendance = Attendance::first();
-        $this->assertNotNull($attendance->check_in_at);
-        $this->assertEquals('2026-09-10 08:00:00', $attendance->check_in_at->format('Y-m-d H:i:s'));
+        $this->assertNotNull($attendance->waktu_masuk);
+        $this->assertEquals('2026-09-10 08:00:00', $attendance->waktu_masuk->format('Y-m-d H:i:s'));
         $this->assertEquals('present', $attendance->status);
-        Storage::disk('public')->assertExists($attendance->check_in_photo);
-        $this->assertStringStartsWith('attendance/check-in/2026/09/', $attendance->check_in_photo);
-        $this->assertEquals(-6.9, (float) $attendance->check_in_latitude);
-        $this->assertEquals(109.1, (float) $attendance->check_in_longitude);
-        $this->assertEquals(10, $attendance->check_in_accuracy);
+        Storage::disk('public')->assertExists($attendance->foto_masuk);
+        $this->assertStringStartsWith('attendance/check-in/2026/09/', $attendance->foto_masuk);
+        $this->assertEquals(-6.9, (float) $attendance->lintang_masuk);
+        $this->assertEquals(109.1, (float) $attendance->bujur_masuk);
+        $this->assertEquals(10, $attendance->akurasi_masuk);
     }
 
     public function test_duplicate_check_in_rejected(): void
@@ -85,7 +85,7 @@ class AttendanceEvidenceTest extends TestCase
         Storage::fake('public');
         $user = $this->employeeUser();
 
-        $payload = ['photo' => $this->photo(), 'latitude' => -6.9, 'longitude' => 109.1, 'accuracy' => 10];
+        $payload = ['foto' => $this->photo(), 'lintang' => -6.9, 'bujur' => 109.1, 'akurasi' => 10];
         $this->actingAs($user)->postJson('/attendance/check-in', $payload)->assertOk();
         $this->actingAs($user)->postJson('/attendance/check-in', $payload)
             ->assertStatus(422)
@@ -97,22 +97,22 @@ class AttendanceEvidenceTest extends TestCase
         Carbon::setTestNow('2026-09-10 08:02:00');
         Storage::fake('public');
         AttendanceLocation::create([
-            'name' => 'Kantor', 'latitude' => -6.9, 'longitude' => 109.1,
-            'radius_meters' => 100, 'max_accuracy_meters' => 100,
-            'enforce_radius' => true, 'is_active' => true,
+            'nama' => 'Kantor', 'lintang' => -6.9, 'bujur' => 109.1,
+            'radius_meter' => 100, 'maks_akurasi_meter' => 100,
+            'wajib_radius' => true, 'aktif' => true,
         ]);
         $user = $this->employeeUser();
 
         $response = $this->actingAs($user)->postJson('/attendance/check-in', [
-            'photo' => $this->photo(),
-            'latitude' => -6.0, // ~100 km dari kantor
-            'longitude' => 109.1,
-            'accuracy' => 10,
+            'foto' => $this->photo(),
+            'lintang' => -6.0, // ~100 km dari kantor
+            'bujur' => 109.1,
+            'akurasi' => 10,
         ]);
 
         $response->assertStatus(422);
         $this->assertStringContainsString('luar area absensi', $response->json('message'));
-        $this->assertNull(Attendance::first()?->check_in_at);
+        $this->assertNull(Attendance::first()?->waktu_masuk);
     }
 
     public function test_check_in_poor_accuracy_rejected(): void
@@ -120,17 +120,17 @@ class AttendanceEvidenceTest extends TestCase
         Carbon::setTestNow('2026-09-10 08:02:00');
         Storage::fake('public');
         AttendanceLocation::create([
-            'name' => 'Kantor', 'latitude' => -6.9, 'longitude' => 109.1,
-            'radius_meters' => 100, 'max_accuracy_meters' => 100,
-            'enforce_radius' => true, 'is_active' => true,
+            'nama' => 'Kantor', 'lintang' => -6.9, 'bujur' => 109.1,
+            'radius_meter' => 100, 'maks_akurasi_meter' => 100,
+            'wajib_radius' => true, 'aktif' => true,
         ]);
         $user = $this->employeeUser();
 
         $response = $this->actingAs($user)->postJson('/attendance/check-in', [
-            'photo' => $this->photo(),
-            'latitude' => -6.9,
-            'longitude' => 109.1,
-            'accuracy' => 500,
+            'foto' => $this->photo(),
+            'lintang' => -6.9,
+            'bujur' => 109.1,
+            'akurasi' => 500,
         ]);
 
         $response->assertStatus(422);
@@ -148,22 +148,22 @@ class AttendanceEvidenceTest extends TestCase
 
         Carbon::setTestNow('2026-09-10 08:02:00');
         $this->actingAs($user)->postJson('/attendance/check-in', [
-            'photo' => $this->photo(), 'latitude' => -6.9, 'longitude' => 109.1, 'accuracy' => 10,
+            'foto' => $this->photo(), 'lintang' => -6.9, 'bujur' => 109.1, 'akurasi' => 10,
         ])->assertOk();
 
         Carbon::setTestNow('2026-09-10 15:05:00');
         $response = $this->actingAs($user)->postJson('/attendance/check-out', [
-            'photo' => $this->photo(), 'latitude' => -6.9, 'longitude' => 109.1, 'accuracy' => 12,
+            'foto' => $this->photo(), 'lintang' => -6.9, 'bujur' => 109.1, 'akurasi' => 12,
         ]);
 
         $response->assertOk()->assertJson(['ok' => true, 'type' => 'pulang']);
         $attendance = Attendance::first();
-        $this->assertEquals('2026-09-10 15:05:00', $attendance->check_out_at->format('Y-m-d H:i:s'));
-        Storage::disk('public')->assertExists($attendance->check_out_photo);
-        $this->assertStringStartsWith('attendance/check-out/2026/09/', $attendance->check_out_photo);
+        $this->assertEquals('2026-09-10 15:05:00', $attendance->waktu_pulang->format('Y-m-d H:i:s'));
+        Storage::disk('public')->assertExists($attendance->foto_pulang);
+        $this->assertStringStartsWith('attendance/check-out/2026/09/', $attendance->foto_pulang);
 
         $this->actingAs($user)->postJson('/attendance/check-out', [
-            'photo' => $this->photo(), 'latitude' => -6.9, 'longitude' => 109.1, 'accuracy' => 12,
+            'foto' => $this->photo(), 'lintang' => -6.9, 'bujur' => 109.1, 'akurasi' => 12,
         ])->assertStatus(422);
     }
 
@@ -176,7 +176,7 @@ class AttendanceEvidenceTest extends TestCase
         $admin = User::create(['name' => 'Admin', 'email' => 'admin-tes@bumdesma.test', 'role' => 'admin', 'password' => Hash::make('password')]);
 
         $this->actingAs($owner)->postJson('/attendance/check-in', [
-            'photo' => $this->photo(), 'latitude' => -6.9, 'longitude' => 109.1, 'accuracy' => 10,
+            'foto' => $this->photo(), 'lintang' => -6.9, 'bujur' => 109.1, 'akurasi' => 10,
         ])->assertOk();
         $attendance = Attendance::first();
 
@@ -192,7 +192,7 @@ class AttendanceEvidenceTest extends TestCase
         $admin = User::create(['name' => 'Admin', 'email' => 'admin-tes2@bumdesma.test', 'role' => 'admin', 'password' => Hash::make('password')]);
 
         $this->actingAs($admin)->postJson('/attendance/check-in', [
-            'photo' => $this->photo(), 'latitude' => -6.9, 'longitude' => 109.1, 'accuracy' => 10,
+            'foto' => $this->photo(), 'lintang' => -6.9, 'bujur' => 109.1, 'akurasi' => 10,
         ])->assertForbidden();
     }
 
@@ -200,29 +200,29 @@ class AttendanceEvidenceTest extends TestCase
     {
         Storage::fake('public');
         AttendanceLocation::create([
-            'name' => 'Kantor', 'latitude' => -6.926433, 'longitude' => 109.185844,
-            'radius_meters' => 100, 'max_accuracy_meters' => 500,
-            'enforce_radius' => true, 'enforce_checkout_radius' => false, 'is_active' => true,
+            'nama' => 'Kantor', 'lintang' => -6.926433, 'bujur' => 109.185844,
+            'radius_meter' => 100, 'maks_akurasi_meter' => 500,
+            'wajib_radius' => true, 'wajib_radius_pulang' => false, 'aktif' => true,
         ]);
         $user = $this->employeeUser();
 
         Carbon::setTestNow('2026-09-10 08:00:00');
         $this->actingAs($user)->postJson('/attendance/check-in', [
-            'photo' => $this->photo(), 'latitude' => -6.926433, 'longitude' => 109.185844, 'accuracy' => 10,
+            'foto' => $this->photo(), 'lintang' => -6.926433, 'bujur' => 109.185844, 'akurasi' => 10,
         ])->assertOk();
 
         // Pulang dari lapangan (±100 km) tetap bisa, lokasi tercatat tanpa penegakan.
         Carbon::setTestNow('2026-09-10 15:05:00');
         $response = $this->actingAs($user)->postJson('/attendance/check-out', [
-            'photo' => $this->photo(), 'latitude' => -6.0, 'longitude' => 109.1, 'accuracy' => 20,
+            'foto' => $this->photo(), 'lintang' => -6.0, 'bujur' => 109.1, 'akurasi' => 20,
         ]);
 
         $response->assertOk()->assertJson(['ok' => true]);
         $attendance = Attendance::first();
-        $this->assertNotNull($attendance->check_out_at);
-        $this->assertNull($attendance->check_out_location_valid);
-        $this->assertNotNull($attendance->check_out_latitude);
-        $this->assertGreaterThan(100, $attendance->check_out_distance_meters);
+        $this->assertNotNull($attendance->waktu_pulang);
+        $this->assertNull($attendance->lokasi_pulang_valid);
+        $this->assertNotNull($attendance->lintang_pulang);
+        $this->assertGreaterThan(100, $attendance->jarak_pulang_meter);
     }
 
     public function test_employee_dashboard_renders_capture_modals(): void

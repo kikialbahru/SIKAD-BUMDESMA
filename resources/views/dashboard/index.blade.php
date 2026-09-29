@@ -23,6 +23,130 @@
             @endforeach
         </div>
     @endif
+    @if ($adminStats)
+        <div class="row g-4 mb-4">
+            <div class="col-xl-8">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body p-4">
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                            <div>
+                                <h2 class="h5 mb-1">Tren kehadiran</h2>
+                                <p class="text-secondary small mb-0">Hadir vs terlambat, 6 bulan terakhir.</p>
+                            </div>
+                            <a class="btn btn-sm btn-outline-primary" href="{{ route('reports.index', ['type' => 'attendance']) }}">
+                                <i class="bi bi-bar-chart me-1"></i>Laporan</a>
+                        </div>
+                        <div style="height:280px"><canvas id="attendanceChart"></canvas></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-4 d-flex flex-column gap-4">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body p-4">
+                        <h2 class="h5 mb-1">Sering terlambat</h2>
+                        <p class="text-secondary small mb-3">Bulan {{ now()->translatedFormat('F Y') }} · 5 teratas</p>
+                        @forelse ($adminStats['topLate'] as $row)
+                            <div class="d-flex align-items-center gap-3 py-2 {{ $loop->last ? '' : 'border-bottom' }}">
+                                <div class="employee-thumb flex-shrink-0" style="width:38px;height:38px;font-size:1rem">
+                                    @if($row->employee?->foto)
+                                        <img src="{{ asset('storage/'.$row->employee->foto) }}" alt="Foto {{ $row->employee->nama }}">
+                                    @else
+                                        <span>{{ strtoupper(mb_substr($row->employee->nama ?? '?', 0, 1)) }}</span>
+                                    @endif
+                                </div>
+                                <div class="flex-grow-1" style="min-width:0">
+                                    <strong class="d-block text-truncate">{{ $row->employee->nama ?? 'Karyawan dihapus' }}</strong>
+                                    <small class="text-secondary">{{ $row->employee->kode_karyawan ?? '-' }} · total {{ $row->late_minutes }} mnt</small>
+                                </div>
+                                <span class="badge text-bg-warning flex-shrink-0">{{ $row->late_count }}× telat</span>
+                            </div>
+                        @empty
+                            <p class="text-secondary small mb-0">
+                                <i class="bi bi-check-circle me-1"></i>Tidak ada keterlambatan bulan ini.</p>
+                        @endforelse
+                    </div>
+                </div>
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body p-4">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <h2 class="h5 mb-0">Belum absen hari ini</h2>
+                            <span class="badge {{ $adminStats['notCheckedIn']->isEmpty() ? 'text-bg-success' : 'text-bg-warning' }}">
+                                {{ $adminStats['notCheckedIn']->count() }} orang</span>
+                        </div>
+                        <p class="text-secondary small mb-3">Karyawan aktif tanpa absen masuk tercatat.</p>
+                        @forelse ($adminStats['notCheckedIn'] as $absent)
+                            @php($wa = preg_replace('/\D/', '', $absent->telepon ?? ''))
+                            @php($wa = $wa ? (str_starts_with($wa, '0') ? '62'.substr($wa, 1) : $wa) : null)
+                            <div class="d-flex align-items-center gap-3 py-2 {{ $loop->last ? '' : 'border-bottom' }}">
+                                <div class="flex-grow-1" style="min-width:0">
+                                    <strong class="d-block text-truncate">{{ $absent->display_name }}</strong>
+                                </div>
+                                @if($wa)
+                                    <a class="btn btn-sm btn-outline-success flex-shrink-0" target="_blank" rel="noopener"
+                                        href="https://wa.me/{{ $wa }}?text={{ urlencode('Halo '.$absent->display_name.', Anda belum tercatat absen masuk hari ini ('.now()->translatedFormat('d F Y').'). Mohon segera lakukan absensi.') }}">
+                                        <i class="bi bi-whatsapp me-1"></i>Ingatkan</a>
+                                @endif
+                            </div>
+                        @empty
+                            <p class="text-secondary small mb-0">
+                                <i class="bi bi-check-circle me-1"></i>Semua karyawan sudah absen.</p>
+                        @endforelse
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-body p-4">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                    <div>
+                        <h2 class="h5 mb-1">Menunggu persetujuan</h2>
+                        <p class="text-secondary small mb-0">Pengajuan cuti & sakit terbaru yang belum diproses.</p>
+                    </div>
+                    <a class="btn btn-sm btn-outline-primary" href="{{ route('leave.index') }}">Lihat semua</a>
+                </div>
+                @if($adminStats['pendingApprovals']->isEmpty())
+                    <p class="text-secondary small mb-0">
+                        <i class="bi bi-check-circle me-1"></i>Tidak ada pengajuan menunggu.</p>
+                @else
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Karyawan</th>
+                                    <th>Jenis</th>
+                                    <th>Periode</th>
+                                    <th>Diajukan</th>
+                                    <th class="text-end">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($adminStats['pendingApprovals'] as $approval)
+                                    <tr>
+                                        <td>
+                                            <strong class="d-block">{{ $approval->employee->nama ?? 'Karyawan dihapus' }}</strong>
+                                            <small class="text-secondary">{{ $approval->employee->kode_karyawan ?? '-' }}</small>
+                                        </td>
+                                        <td>
+                                            <span class="badge {{ $approval->jenis === 'sick' ? 'text-bg-info' : 'text-bg-primary' }}">
+                                                {{ $approval->jenis === 'sick' ? 'Sakit' : 'Cuti' }}</span>
+                                        </td>
+                                        <td>
+                                            <small>{{ $approval->tanggal_mulai->translatedFormat('d M') }} – {{ $approval->tanggal_selesai->translatedFormat('d M Y') }}</small>
+                                            <small class="text-secondary d-block">{{ $approval->jumlah_hari }} hari</small>
+                                        </td>
+                                        <td><small class="text-secondary">{{ $approval->created_at->diffForHumans() }}</small></td>
+                                        <td class="text-end">
+                                            <a class="btn btn-sm btn-primary" href="{{ route('leave.show', $approval) }}">Tinjau</a>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @endif
+            </div>
+        </div>
+    @endif
     <div class="row g-4">
         @unless (auth()->user()->isAdmin())
             <div class="col-xl-8">
@@ -33,42 +157,42 @@
                                 <h2 class="h5 mb-1">Absensi hari ini</h2>
                                 <p class="text-secondary small mb-0">Gunakan waktu server sebagai catatan resmi.</p>
                             </div><span
-                                class="badge {{ $attendance?->status === 'late' ? 'text-bg-warning' : ($attendance?->check_in_at ? 'text-bg-success' : 'text-bg-secondary') }}">{{ $attendance?->status === 'late' ? 'Terlambat' : ($attendance?->check_in_at ? 'Hadir' : 'Belum absen') }}</span>
+                                class="badge {{ $attendance?->status === 'late' ? 'text-bg-warning' : ($attendance?->waktu_masuk ? 'text-bg-success' : 'text-bg-secondary') }}">{{ $attendance?->status === 'late' ? 'Terlambat' : ($attendance?->waktu_masuk ? 'Hadir' : 'Belum absen') }}</span>
                         </div>
                         <div class="row g-3 mb-4">
                             <div class="col-sm-4">
                                 <div class="p-3 rounded-3 bg-light"><small class="text-secondary">Masuk</small><strong
-                                        class="d-block fs-4">{{ $attendance?->check_in_at?->format('H:i') ?? '--:--' }}</strong>
+                                        class="d-block fs-4">{{ $attendance?->waktu_masuk?->format('H:i') ?? '--:--' }}</strong>
                                 </div>
                             </div>
                             <div class="col-sm-4">
                                 <div class="p-3 rounded-3 bg-light"><small class="text-secondary">Pulang</small><strong
-                                        class="d-block fs-4">{{ $attendance?->check_out_at?->format('H:i') ?? '--:--' }}</strong>
+                                        class="d-block fs-4">{{ $attendance?->waktu_pulang?->format('H:i') ?? '--:--' }}</strong>
                                 </div>
                             </div>
                             <div class="col-sm-4">
                                 <div class="p-3 rounded-3 bg-light"><small class="text-secondary">Keterlambatan</small><strong
-                                        class="d-block fs-4">{{ $attendance?->late_minutes ?? 0 }} <small>mnt</small></strong>
+                                        class="d-block fs-4">{{ $attendance?->menit_telat ?? 0 }} <small>mnt</small></strong>
                                 </div>
                             </div>
                         </div>
-                        @if ($attendance?->check_in_at)
+                        @if ($attendance?->waktu_masuk)
                             <div class="d-flex flex-wrap align-items-center gap-2 mb-3"><span class="text-secondary small">Bukti
                                     masuk:</span>
-                                @if ($attendance->check_in_photo)
+                                @if ($attendance->foto_masuk)
                                     <a href="{{ route('attendance.show', $attendance) }}"><img
-                                            src="{{ asset('storage/' . $attendance->check_in_photo) }}" width="30"
+                                            src="{{ asset('storage/' . $attendance->foto_masuk) }}" width="30"
                                             height="30" class="rounded border" style="object-fit:cover"
                                             alt="Foto absen masuk"></a><span class="badge text-bg-success"><i
                                             class="bi bi-camera me-1"></i>Foto tersimpan</span>
-                                    @endif @if ($attendance->check_in_latitude && $attendance->check_in_longitude)
+                                    @endif @if ($attendance->lintang_masuk && $attendance->bujur_masuk)
                                         <a class="text-decoration-none"
                                             href="{{ route('attendance.show', $attendance) }}"><span
-                                                class="badge {{ $attendance->check_in_location_valid === false ? 'text-bg-danger' : 'text-bg-success' }}"><i
-                                                    class="bi bi-geo-alt me-1"></i>{{ $attendance->check_in_location_valid === false ? 'Di luar area' : ($attendance->check_in_location_valid === true ? 'Lokasi sesuai' : 'Lokasi tercatat') }}</span></a>
+                                                class="badge {{ $attendance->lokasi_masuk_valid === false ? 'text-bg-danger' : 'text-bg-success' }}"><i
+                                                    class="bi bi-geo-alt me-1"></i>{{ $attendance->lokasi_masuk_valid === false ? 'Di luar area' : ($attendance->lokasi_masuk_valid === true ? 'Lokasi sesuai' : 'Lokasi tercatat') }}</span></a>
                                     @endif
                             </div>
-                            @endif @if ($attendance?->check_in_at && !$attendance?->check_out_at)
+                            @endif @if ($attendance?->waktu_masuk && !$attendance?->waktu_pulang)
                                 <div class="d-flex flex-wrap align-items-center gap-2 mb-3"><span
                                         class="text-secondary small">Status Pulang:</span>
                                     @if (($checkout['state'] ?? '') === 'allowed')
@@ -87,10 +211,10 @@
                                 </div>
                             @endif
                             <div class="d-flex flex-wrap gap-2">
-                                @if (!$attendance?->check_in_at)
+                                @if (!$attendance?->waktu_masuk)
                                     <button class="btn btn-primary" type="button" data-bs-toggle="modal"
                                         data-bs-target="#checkInModal"><i class="bi bi-camera me-2"></i>Absen Masuk</button>
-                                @elseif(!$attendance?->check_out_at)
+                                @elseif(!$attendance?->waktu_pulang)
                                     @if ($checkout['allowed'] ?? false)
                                         <button class="btn btn-success" type="button" data-bs-toggle="modal"
                                             data-bs-target="#checkOutModal"><i class="bi bi-camera me-2"></i>Absen
@@ -100,7 +224,7 @@
                                             class="bi bi-check-circle text-success me-2"></i>Absensi hari ini lengkap</span>
                                 @endif
                             </div>
-                            @if ($attendance?->check_in_at && !$attendance?->check_out_at)
+                            @if ($attendance?->waktu_masuk && !$attendance?->waktu_pulang)
                                 <div class="form-text mt-2">{{ $checkout['reason'] ?? '' }}</div>
                             @endif
                     </div>
@@ -139,4 +263,32 @@
         </div>
     </div>
     @include('attendance.capture-modals')
+@push('scripts')
+@if ($adminStats)
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+    (() => {
+        const canvas = document.querySelector('#attendanceChart');
+        if (!canvas || typeof Chart === 'undefined') return;
+        const data = @json($adminStats['chart']);
+        new Chart(canvas, {
+            type: 'bar',
+            data: {
+                labels: data.labels,
+                datasets: [
+                    { label: 'Hadir', data: data.present, backgroundColor: '#106fae', borderRadius: 6 },
+                    { label: 'Terlambat', data: data.late, backgroundColor: '#f5c34d', borderRadius: 6 },
+                ],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom' } },
+                scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+            },
+        });
+    })();
+</script>
+@endif
+@endpush
 @endsection

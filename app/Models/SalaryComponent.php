@@ -7,12 +7,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class SalaryComponent extends Model
 {
-    protected $fillable = ['employee_id', 'name', 'type', 'amount', 'is_active'];
+    protected $table = 'komponen_gaji';
 
-    protected $casts = ['amount' => 'decimal:2', 'is_active' => 'boolean'];
+    protected $fillable = ['karyawan_id', 'nama', 'jenis', 'nominal', 'aktif'];
+
+    protected $casts = ['nominal' => 'decimal:2', 'aktif' => 'boolean'];
 
     public function employee(): BelongsTo
     {
-        return $this->belongsTo(Employee::class);
+        return $this->belongsTo(Employee::class, 'karyawan_id');
     }
 }

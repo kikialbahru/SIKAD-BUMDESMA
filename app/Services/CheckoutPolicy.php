@@ -38,13 +38,13 @@ class CheckoutPolicy
         $schedule = $employee->workSchedule;
         $day = ($date ?? now())->toDateString();
 
-        $start = $schedule?->start_time ?? substr((string) $settings->work_start_time, 0, 5);
-        $end = $schedule?->end_time ?? substr((string) $settings->work_end_time, 0, 5);
-        $tolerance = $schedule?->late_tolerance_minutes ?? $settings->late_tolerance_minutes;
+        $start = $schedule?->jam_masuk ?? substr((string) $settings->jam_masuk, 0, 5);
+        $end = $schedule?->jam_pulang ?? substr((string) $settings->jam_pulang, 0, 5);
+        $tolerance = $schedule?->toleransi_telat_menit ?? $settings->toleransi_telat_menit;
 
-        $settingsEnd = Carbon::parse($day.' '.substr((string) $settings->work_end_time, 0, 5));
-        $before = $settingsEnd->diffInMinutes(Carbon::parse($day.' '.substr((string) $settings->checkout_start_time, 0, 5)));
-        $after = Carbon::parse($day.' '.substr((string) $settings->checkout_end_time, 0, 5))->diffInMinutes($settingsEnd);
+        $settingsEnd = Carbon::parse($day.' '.substr((string) $settings->jam_pulang, 0, 5));
+        $before = $settingsEnd->diffInMinutes(Carbon::parse($day.' '.substr((string) $settings->mulai_absen_pulang, 0, 5)));
+        $after = Carbon::parse($day.' '.substr((string) $settings->akhir_absen_pulang, 0, 5))->diffInMinutes($settingsEnd);
 
         $endDt = Carbon::parse($day.' '.$end);
 
@@ -68,20 +68,20 @@ class CheckoutPolicy
     {
         $now ??= now();
 
-        if (! $attendance?->check_in_at) {
+        if (! $attendance?->waktu_masuk) {
             return ['state' => 'no_checkin', 'allowed' => false, 'reason' => 'Lakukan absensi masuk terlebih dahulu.'];
         }
 
-        if ($attendance->check_out_at) {
+        if ($attendance->waktu_pulang) {
             return ['state' => 'done', 'allowed' => false, 'reason' => 'Absensi pulang hari ini sudah tercatat.'];
         }
 
         $times = static::workTimes($employee, $now);
-        $earlyBypass = $attendance->checkout_status === 'approved'
-            && in_array($attendance->checkout_approval_type, ['early', 'special'], true);
+        $earlyBypass = $attendance->status_pulang === 'approved'
+            && in_array($attendance->tipe_persetujuan_pulang, ['early', 'special'], true);
 
         if ($now->lt($times['window_start']) && ! $earlyBypass) {
-            if ($attendance->checkout_status === 'rejected') {
+            if ($attendance->status_pulang === 'rejected') {
                 return ['state' => 'rejected', 'allowed' => false, 'reason' => 'Pengajuan pulang awal ditolak Admin. Hubungi Admin untuk informasi lebih lanjut.'];
             }
 

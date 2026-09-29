@@ -19,8 +19,8 @@
             <div class="col-lg-4 bg-primary-subtle d-flex align-items-center justify-content-center p-5">
                 <div class="text-center">
                     <div class="employee-avatar mx-auto mb-3">
-                        @if ($employee->photo)
-                            <img src="{{ asset('storage/' . $employee->photo) }}"
+                        @if ($employee->foto)
+                            <img src="{{ asset('storage/' . $employee->foto) }}"
                             alt="Foto {{ $employee->display_name }}">
                             @else
                             <span>
@@ -29,7 +29,7 @@
                         @endif
                     </div>
                     <h1 class="h4 mb-1">{{ $employee->display_name }}</h1>
-                    <p class="text-secondary mb-0">{{ $employee->position?->name ?? 'Belum ada jabatan' }}</p>
+                    <p class="text-secondary mb-0">{{ $employee->position?->nama ?? 'Belum ada jabatan' }}</p>
                 </div>
             </div>
             <div class="col-lg-8 p-4 p-lg-5">
@@ -39,8 +39,8 @@
                         <h2 class="h3 mb-0">Informasi profil</h2>
                     </div>
                     <span
-                        class="badge text-bg-{{ $employee->is_active ? 'success' : 'secondary' }}">
-                        {{ $employee->is_active ? 'Aktif' : 'Nonaktif' }}
+                        class="badge text-bg-{{ $employee->aktif ? 'success' : 'secondary' }}">
+                        {{ $employee->aktif ? 'Aktif' : 'Nonaktif' }}
                         </span>
                 </div>
                 <div class="row g-4">
@@ -48,14 +48,14 @@
                         <small class="text-secondary d-block">ID
                             Karyawan</small>
                             <strong>
-                                {{ $employee->employee_code }}
+                                {{ $employee->kode_karyawan }}
                             </strong>
                             </div>
                     <div class="col-sm-6">
                         <small class="text-secondary d-block">Tanggal
                             Bergabung</small>
                             <strong>
-                                {{ $employee->joined_at?->format('d F Y') ?? '-' }}
+                                {{ $employee->tanggal_masuk?->format('d F Y') ?? '-' }}
                             </strong>
                             </div>
                     <div class="col-sm-6">
@@ -69,14 +69,14 @@
                         <small class="text-secondary d-block">Nomor
                             Telepon</small>
                             <strong>
-                                {{ $employee->phone ?: '-' }}
+                                {{ $employee->telepon ?: '-' }}
                             </strong>
                             </div>
                     <div class="col-sm-6">
                         <small class="text-secondary d-block">Jadwal
                             Kerja</small>
                             <strong>
-                                {{ $employee->workSchedule?->name ?? '-' }}
+                                {{ $employee->workSchedule?->nama ?? '-' }}
                             </strong>
                             </div>
                 </div>

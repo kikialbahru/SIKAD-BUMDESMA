@@ -34,9 +34,9 @@ class AutoLatePointsTest extends TestCase
             'password' => Hash::make('password'),
         ]);
         Employee::create([
-            'user_id' => $user->id,
-            'employee_code' => 'KRY-'.substr(str_replace(['@', '.', '-'], '', $email), 0, 10),
-            'is_active' => true,
+            'pengguna_id' => $user->id,
+            'kode_karyawan' => 'KRY-'.substr(str_replace(['@', '.', '-'], '', $email), 0, 10),
+            'aktif' => true,
         ]);
 
         return $user;
@@ -45,10 +45,10 @@ class AutoLatePointsTest extends TestCase
     private function lateAttendance(Employee $employee, string $date, int $lateMinutes): void
     {
         Attendance::create([
-            'employee_id' => $employee->id,
-            'attendance_date' => $date,
-            'check_in_at' => $date.' 08:'.str_pad((string) min(59, $lateMinutes), 2, '0', STR_PAD_LEFT).':00',
-            'late_minutes' => $lateMinutes,
+            'karyawan_id' => $employee->id,
+            'tanggal' => $date,
+            'waktu_masuk' => $date.' 08:'.str_pad((string) min(59, $lateMinutes), 2, '0', STR_PAD_LEFT).':00',
+            'menit_telat' => $lateMinutes,
             'status' => 'late',
         ]);
     }
@@ -66,12 +66,12 @@ class AutoLatePointsTest extends TestCase
         // Total 30 menit, aturan default 15 menit = 1 poin → 2 poin.
         $punishment = Punishment::first();
         $this->assertNotNull($punishment);
-        $this->assertEquals($employee->id, $punishment->employee_id);
-        $this->assertEquals('points_deduction', $punishment->type);
-        $this->assertEquals(2, $punishment->points);
-        $this->assertEquals(0, (float) $punishment->amount);
-        $this->assertTrue($punishment->is_auto);
-        $this->assertEquals('2026-09', $punishment->issued_at->format('Y-m'));
+        $this->assertEquals($employee->id, $punishment->karyawan_id);
+        $this->assertEquals('points_deduction', $punishment->jenis);
+        $this->assertEquals(2, $punishment->poin);
+        $this->assertEquals(0, (float) $punishment->nominal);
+        $this->assertTrue($punishment->otomatis);
+        $this->assertEquals('2026-09', $punishment->dijatuhkan_pada->format('Y-m'));
     }
 
     public function test_regenerate_replaces_previous_auto_rows(): void
@@ -88,7 +88,7 @@ class AutoLatePointsTest extends TestCase
         $this->actingAs($admin)->post(route('recognition.auto-points'), ['month' => '2026-09'])->assertRedirect();
 
         $this->assertEquals(1, Punishment::count());
-        $this->assertEquals(2, Punishment::first()->points);
+        $this->assertEquals(2, Punishment::first()->poin);
     }
 
     public function test_manual_punishments_are_untouched(): void
@@ -97,17 +97,17 @@ class AutoLatePointsTest extends TestCase
         $employee = $this->employeeUser()->employee;
         $this->lateAttendance($employee, '2026-09-10', 20);
         Punishment::create([
-            'employee_id' => $employee->id,
-            'type' => 'warning',
-            'amount' => 0,
-            'title' => 'Teguran manual',
-            'issued_at' => '2026-09-05',
+            'karyawan_id' => $employee->id,
+            'jenis' => 'warning',
+            'nominal' => 0,
+            'judul' => 'Teguran manual',
+            'dijatuhkan_pada' => '2026-09-05',
         ]);
 
         $this->actingAs($admin)->post(route('recognition.auto-points'), ['month' => '2026-09'])->assertRedirect();
 
         $this->assertEquals(2, Punishment::count());
-        $this->assertEquals(1, Punishment::where('is_auto', false)->count());
+        $this->assertEquals(1, Punishment::where('otomatis', false)->count());
     }
 
     public function test_custom_rule_is_respected(): void
@@ -115,22 +115,22 @@ class AutoLatePointsTest extends TestCase
         $admin = $this->adminUser();
         $employee = $this->employeeUser()->employee;
         AttendanceSetting::current()->update([
-            'late_points_block_minutes' => 10,
-            'late_points_per_block' => 2,
+            'blok_menit_poin' => 10,
+            'poin_per_blok' => 2,
         ]);
         $this->lateAttendance($employee, '2026-09-10', 30);
 
         $this->actingAs($admin)->post(route('recognition.auto-points'), ['month' => '2026-09'])->assertRedirect();
 
         // 30 menit / 10 × 2 = 6 poin.
-        $this->assertEquals(6, Punishment::first()->points);
+        $this->assertEquals(6, Punishment::first()->poin);
     }
 
     public function test_disabled_setting_rejects_generate(): void
     {
         $admin = $this->adminUser();
         $employee = $this->employeeUser()->employee;
-        AttendanceSetting::current()->update(['auto_late_points_enabled' => false]);
+        AttendanceSetting::current()->update(['poin_otomatis_aktif' => false]);
         $this->lateAttendance($employee, '2026-09-10', 20);
 
         $this->actingAs($admin)->post(route('recognition.auto-points'), ['month' => '2026-09'])

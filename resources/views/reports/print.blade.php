@@ -179,8 +179,8 @@
         $pct = fn($v) => $v >= 80 ? ['D1FAE5', '065F46'] : ($v >= 50 ? ['FEF3C7', '92400E'] : ['FEE2E2', '991B1B']);
         $activePill = fn($a) => $a ? ['Aktif', 'D1FAE5', '065F46'] : ['Nonaktif', 'E2E8F0', '475569'];
         $rp = fn($v) => 'Rp '.number_format($v, 0, ',', '.');
-        $scopeLine = !empty($filters['employee_id']) && $employees->count() === 1
-            ? ' · Karyawan: '.$employees->first()->employee_code.' - '.$employees->first()->display_name : '';
+        $scopeLine = !empty($filters['karyawan_id']) && $employees->count() === 1
+            ? ' · Karyawan: '.$employees->first()->kode_karyawan.' - '.$employees->first()->display_name : '';
         $statusLine = !empty($filters['status']) ? ' · Status: '.$filters['status'] : '';
     @endphp
     <table class="kop-table">
@@ -189,7 +189,7 @@
             <td>
                 <h1>BUMDESMA LKD TARUB</h1>
                 <div class="kop-title">LAPORAN {{ strtoupper(str_replace('-', ' ', $filters['type'])) }}</div>
-                <div class="meta">Periode: {{ $filters['start']->translatedFormat('F Y') }} · Dicetak:
+                <div class="meta">Periode: {{ $filters['period_label'] ?? $filters['start']->translatedFormat('F Y') }} · Dicetak:
                     {{ now()->format('d/m/Y H:i') }}{{ $scopeLine }}{{ $statusLine }}</div>
             </td>
         </tr>
@@ -216,9 +216,9 @@
                     @php([$pbg, $pfg] = $pct($item['percentage']))
                     <tr @class(['zebra' => $index % 2 === 1])>
                         <td class="center">{{ $index + 1 }}</td>
-                        <td>{{ $item['employee']->employee_code }}</td>
+                        <td>{{ $item['employee']->kode_karyawan }}</td>
                         <td>{{ $item['employee']->display_name }}</td>
-                        <td>{{ $item['employee']->position?->name ?? '-' }}</td>
+                        <td>{{ $item['employee']->position?->nama ?? '-' }}</td>
                         <td class="num">{{ $item['present'] }}</td>
                         <td class="num">{{ $item['late'] }}</td>
                         <td class="num">{{ $item['permission'] }}</td>
@@ -254,12 +254,12 @@
                     @php([$label, $bg, $fg] = $leaveStatus($item->status))
                     <tr @class(['zebra' => $index % 2 === 1])>
                         <td class="center">{{ $index + 1 }}</td>
-                        <td>{{ $item->employee?->employee_code }}</td>
+                        <td>{{ $item->employee?->kode_karyawan }}</td>
                         <td>{{ $item->employee?->user?->name }}</td>
-                        <td>{{ $leaveType($item->type) }}</td>
-                        <td>{{ $item->start_date->format('d/m/Y') }}</td>
-                        <td>{{ $item->end_date->format('d/m/Y') }}</td>
-                        <td>{{ $item->total_days }} hari</td>
+                        <td>{{ $leaveType($item->jenis) }}</td>
+                        <td>{{ $item->tanggal_mulai->format('d/m/Y') }}</td>
+                        <td>{{ $item->tanggal_selesai->format('d/m/Y') }}</td>
+                        <td>{{ $item->jumlah_hari }} hari</td>
                         <td><span class="pill" style="{{ $pill($bg, $fg) }}">{{ $label }}</span></td>
                     </tr>
                 @empty
@@ -298,13 +298,13 @@
                     @php([$label, $bg, $fg] = $payrollStatus($item->status))
                     <tr @class(['zebra' => $index % 2 === 1])>
                         <td class="center">{{ $index + 1 }}</td>
-                        <td>{{ $item->employee?->employee_code }}</td>
+                        <td>{{ $item->employee?->kode_karyawan }}</td>
                         <td>{{ $item->employee?->user?->name }}</td>
-                        <td>{{ $item->period_start->format('m/Y') }}</td>
-                        <td class="num">{{ $rp($item->basic_salary) }}</td>
-                        <td class="num">{{ $rp($item->reward_total) }}</td>
-                        <td class="num">{{ $rp($item->late_deduction + $item->absence_deduction + $item->punishment_total) }}</td>
-                        <td class="num"><strong>{{ $rp($item->net_salary) }}</strong></td>
+                        <td>{{ $item->periode_mulai->format('m/Y') }}</td>
+                        <td class="num">{{ $rp($item->gaji_pokok) }}</td>
+                        <td class="num">{{ $rp($item->total_reward) }}</td>
+                        <td class="num">{{ $rp($item->potongan_telat + $item->potongan_absen + $item->total_hukuman) }}</td>
+                        <td class="num"><strong>{{ $rp($item->gaji_bersih) }}</strong></td>
                         <td><span class="pill" style="{{ $pill($bg, $fg) }}">{{ $label }}</span></td>
                     </tr>
                 @empty
@@ -315,7 +315,7 @@
                 @if ($payrolls->isNotEmpty())
                     <tr class="total">
                         <td colspan="4" class="center">TOTAL</td>
-                        <td class="num">{{ $rp($payrolls->sum('basic_salary')) }}</td>
+                        <td class="num">{{ $rp($payrolls->sum('gaji_pokok')) }}</td>
                         <td class="num">{{ $rp($payrollSummary['reward']) }}</td>
                         <td class="num">{{ $rp($payrollSummary['deduction']) }}</td>
                         <td class="num">{{ $rp($payrollSummary['net']) }}</td>
@@ -344,9 +344,9 @@
                         <td class="center">{{ $index + 1 }}</td>
                         <td>{{ $item->employee?->user?->name }}</td>
                         <td><span class="pill" style="{{ $pill('D1FAE5', '065F46') }}">Reward</span></td>
-                        <td>{{ $item->title }}</td>
-                        <td>{{ $rp($item->amount) }}</td>
-                        <td>{{ $item->awarded_at->format('d/m/Y') }}</td>
+                        <td>{{ $item->judul }}</td>
+                        <td>{{ $rp($item->nominal) }}</td>
+                        <td>{{ $item->diberikan_pada->format('d/m/Y') }}</td>
                     </tr>
                     @endforeach @foreach ($punishments as $index => $item)
                         @php($no = $rewards->count() + $index + 1)
@@ -354,9 +354,9 @@
                             <td class="center">{{ $no }}</td>
                             <td>{{ $item->employee?->user?->name }}</td>
                             <td><span class="pill" style="{{ $pill('FEE2E2', '991B1B') }}">Punishment</span></td>
-                            <td>{{ $item->title }}</td>
-                            <td>{{ $item->type === 'points_deduction' && $item->points > 0 ? $item->points . ' poin' : $rp($item->amount) }}</td>
-                            <td>{{ $item->issued_at->format('d/m/Y') }}</td>
+                            <td>{{ $item->judul }}</td>
+                            <td>{{ $item->jenis === 'points_deduction' && $item->poin > 0 ? $item->poin . ' poin' : $rp($item->nominal) }}</td>
+                            <td>{{ $item->dijatuhkan_pada->format('d/m/Y') }}</td>
                         </tr>
                     @endforeach
                     @if ($rewards->isEmpty() && $punishments->isEmpty())
@@ -385,14 +385,14 @@
                 @forelse ($visits as $index => $item)
                     <tr @class(['zebra' => $index % 2 === 1])>
                         <td class="center">{{ $index + 1 }}</td>
-                        <td>{{ $item->employee?->employee_code }}</td>
+                        <td>{{ $item->employee?->kode_karyawan }}</td>
                         <td>{{ $item->employee?->user?->name }}</td>
-                        <td>{{ $item->title }}</td>
-                        <td>{{ $item->description ?? '-' }}</td>
-                        <td>{{ $item->visit_date->format('d/m/Y') }}</td>
+                        <td>{{ $item->judul }}</td>
+                        <td>{{ $item->deskripsi ?? '-' }}</td>
+                        <td>{{ $item->tanggal->format('d/m/Y') }}</td>
                         <td>
-                            @if (!empty($filters['employee_id']) && $item->latitude && $item->longitude)
-                                {{ number_format($item->latitude, 5) }}, {{ number_format($item->longitude, 5) }}
+                            @if (!empty($filters['karyawan_id']) && $item->lintang && $item->bujur)
+                                {{ number_format($item->lintang, 5) }}, {{ number_format($item->bujur, 5) }}
                             @else
                                 -
                             @endif
@@ -421,13 +421,13 @@
             </thead>
             <tbody>
                 @forelse ($employees as $index => $item)
-                    @php([$label, $bg, $fg] = $activePill($item->is_active))
+                    @php([$label, $bg, $fg] = $activePill($item->aktif))
                     <tr @class(['zebra' => $index % 2 === 1])>
                         <td class="center">{{ $index + 1 }}</td>
-                        <td>{{ $item->employee_code }}</td>
+                        <td>{{ $item->kode_karyawan }}</td>
                         <td>{{ $item->display_name }}</td>
-                        <td>{{ $item->position?->name ?? '-' }}</td>
-                        <td>{{ $item->joined_at?->format('d/m/Y') ?? '-' }}</td>
+                        <td>{{ $item->position?->nama ?? '-' }}</td>
+                        <td>{{ $item->tanggal_masuk?->format('d/m/Y') ?? '-' }}</td>
                         <td><span class="pill" style="{{ $pill($bg, $fg) }}">{{ $label }}</span></td>
                     </tr>
                 @empty

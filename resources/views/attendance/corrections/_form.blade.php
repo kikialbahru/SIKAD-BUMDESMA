@@ -3,54 +3,54 @@
     <div class="col-md-6">
         <label class="form-label" for="cor_employee">Karyawan</label>
         <select
-            class="form-select @error('employee_id') is-invalid @enderror"
+            class="form-select @error('karyawan_id') is-invalid @enderror"
             id="cor_employee"
-            name="employee_id"
+            name="karyawan_id"
             required>
             <option value="">— Pilih karyawan —</option>
             @foreach($employees as $employee)
                 <option
                     value="{{ $employee->id }}"
-                    @selected((string) old('employee_id', $attendance->employee_id ?? '') === (string) $employee->id)>
-                    {{ $employee->employee_code }} — {{ $employee->display_name }}@unless($employee->is_active) (nonaktif)@endunless
+                    @selected((string) old('karyawan_id', $attendance->karyawan_id ?? '') === (string) $employee->id)>
+                    {{ $employee->kode_karyawan }} — {{ $employee->display_name }}@unless($employee->aktif) (nonaktif)@endunless
                 </option>
             @endforeach
         </select>
-        @error('employee_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
+        @error('karyawan_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
     </div>
     <div class="col-md-6">
         <label class="form-label" for="cor_date">Tanggal</label>
         <input
-            class="form-control @error('attendance_date') is-invalid @enderror"
+            class="form-control @error('tanggal') is-invalid @enderror"
             id="cor_date"
             type="date"
-            name="attendance_date"
-            value="{{ old('attendance_date', isset($attendance) ? $attendance->attendance_date->format('Y-m-d') : now()->toDateString()) }}"
+            name="tanggal"
+            value="{{ old('tanggal', isset($attendance) ? $attendance->tanggal->format('Y-m-d') : now()->toDateString()) }}"
             max="{{ now()->toDateString() }}"
             required>
-        @error('attendance_date')<div class="invalid-feedback">{{ $message }}</div>@enderror
+        @error('tanggal')<div class="invalid-feedback">{{ $message }}</div>@enderror
     </div>
     <div class="col-md-6">
         <label class="form-label" for="cor_in">Jam masuk</label>
         <input
-            class="form-control @error('check_in') is-invalid @enderror"
+            class="form-control @error('jam_masuk') is-invalid @enderror"
             id="cor_in"
             type="time"
-            name="check_in"
-            value="{{ old('check_in', isset($attendance) && $attendance->check_in_at ? $attendance->check_in_at->format('H:i') : '') }}">
-        @error('check_in')<div class="invalid-feedback">{{ $message }}</div>@enderror
+            name="jam_masuk"
+            value="{{ old('jam_masuk', isset($attendance) && $attendance->waktu_masuk ? $attendance->waktu_masuk->format('H:i') : '') }}">
+        @error('jam_masuk')<div class="invalid-feedback">{{ $message }}</div>@enderror
     </div>
     <div class="col-md-6">
         <label class="form-label" for="cor_out">Jam pulang <span class="text-secondary">(boleh kosong)
             </span>
         </label>
         <input
-            class="form-control @error('check_out') is-invalid @enderror"
+            class="form-control @error('jam_pulang') is-invalid @enderror"
             id="cor_out"
             type="time"
-            name="check_out"
-            value="{{ old('check_out', isset($attendance) && $attendance->check_out_at ? $attendance->check_out_at->format('H:i') : '') }}">
-        @error('check_out')<div class="invalid-feedback">{{ $message }}</div>@enderror
+            name="jam_pulang"
+            value="{{ old('jam_pulang', isset($attendance) && $attendance->waktu_pulang ? $attendance->waktu_pulang->format('H:i') : '') }}">
+        @error('jam_pulang')<div class="invalid-feedback">{{ $message }}</div>@enderror
     </div>
     <div class="col-md-6">
         <label class="form-label" for="cor_status">Status</label>
@@ -86,14 +86,14 @@
     <div class="col-md-6">
         <label class="form-label" for="cor_note">Keterangan koreksi</label>
         <textarea
-            class="form-control @error('note') is-invalid @enderror"
+            class="form-control @error('catatan') is-invalid @enderror"
             id="cor_note"
-            name="note"
+            name="catatan"
             rows="3"
             maxlength="500"
             placeholder="cth. Lupa absen, HP mati, GPS bermasalah...">
-        {{ old('note', $attendance->note ?? '') }}
+        {{ old('catatan', $attendance->catatan ?? '') }}
         </textarea>
-        @error('note')<div class="invalid-feedback">{{ $message }}</div>@enderror
+        @error('catatan')<div class="invalid-feedback">{{ $message }}</div>@enderror
     </div>
 </div>

@@ -14,12 +14,12 @@ class RecognitionController extends Controller
 {
     public function index(Request $request)
     {
-        $employeeId = $request->user()->isAdmin() ? $request->integer('employee_id') : $request->user()->employee?->id;
-        $employees = $request->user()->isAdmin() ? Employee::with('user')->where('is_active', true)->orderBy('employee_code')->get() : collect();
+        $employeeId = $request->user()->isAdmin() ? $request->integer('karyawan_id') : $request->user()->employee?->id;
+        $employees = $request->user()->isAdmin() ? Employee::with('user')->where('aktif', true)->orderBy('kode_karyawan')->get() : collect();
 
         return view('recognition.index', [
-            'rewards' => Reward::with('employee.user')->when($employeeId, fn ($query) => $query->where('employee_id', $employeeId))->latest('awarded_at')->paginate(10, ['*'], 'rewards_page'),
-            'punishments' => Punishment::with('employee.user')->when($employeeId, fn ($query) => $query->where('employee_id', $employeeId))->latest('issued_at')->paginate(10, ['*'], 'punishments_page'),
+            'rewards' => Reward::with('employee.user')->when($employeeId, fn ($query) => $query->where('karyawan_id', $employeeId))->latest('diberikan_pada')->paginate(10, ['*'], 'rewards_page'),
+            'punishments' => Punishment::with('employee.user')->when($employeeId, fn ($query) => $query->where('karyawan_id', $employeeId))->latest('dijatuhkan_pada')->paginate(10, ['*'], 'punishments_page'),
             'employees' => $employees,
             'selectedEmployee' => $employeeId,
             'pointSettings' => AttendanceSetting::current(),
@@ -37,11 +37,11 @@ class RecognitionController extends Controller
             'month' => ['nullable', 'date_format:Y-m'],
         ]);
         $settings = AttendanceSetting::current();
-        if (! $settings->auto_late_points_enabled) {
+        if (! $settings->poin_otomatis_aktif) {
             return back()->with('error', 'Generate poin otomatis sedang nonaktif. Aktifkan dulu di Pengaturan Absensi.');
         }
-        $block = (int) $settings->late_points_block_minutes;
-        $perBlock = (int) $settings->late_points_per_block;
+        $block = (int) $settings->blok_menit_poin;
+        $perBlock = (int) $settings->poin_per_blok;
         if ($block < 1) {
             return back()->with('error', 'Blok menit aturan poin tidak valid. Periksa Pengaturan Absensi.');
         }
@@ -52,14 +52,14 @@ class RecognitionController extends Controller
         $generated = 0;
 
         DB::transaction(function () use ($start, $end, $label, $block, $perBlock, &$generated) {
-            Punishment::where('is_auto', true)->whereBetween('issued_at', [$start, $end])->delete();
+            Punishment::where('otomatis', true)->whereBetween('dijatuhkan_pada', [$start, $end])->delete();
 
-            foreach (Employee::where('is_active', true)->get() as $employee) {
+            foreach (Employee::where('aktif', true)->get() as $employee) {
                 $lateDays = $employee->attendances()
-                    ->whereBetween('attendance_date', [$start, $end])
+                    ->whereBetween('tanggal', [$start, $end])
                     ->where('status', 'late')
                     ->get();
-                $totalLate = (int) $lateDays->sum('late_minutes');
+                $totalLate = (int) $lateDays->sum('menit_telat');
                 if ($totalLate <= 0) {
                     continue;
                 }
@@ -68,14 +68,14 @@ class RecognitionController extends Controller
                     continue;
                 }
                 Punishment::create([
-                    'employee_id' => $employee->id,
-                    'type' => 'points_deduction',
-                    'amount' => 0,
-                    'points' => $points,
-                    'is_auto' => true,
-                    'title' => 'Poin keterlambatan '.$label,
-                    'description' => 'Otomatis: total '.$totalLate.' menit terlambat dari '.$lateDays->count().' hari kehadiran pada '.$label.' ('.$block.' menit = '.$perBlock.' poin).',
-                    'issued_at' => $end->toDateString(),
+                    'karyawan_id' => $employee->id,
+                    'jenis' => 'points_deduction',
+                    'nominal' => 0,
+                    'poin' => $points,
+                    'otomatis' => true,
+                    'judul' => 'Poin keterlambatan '.$label,
+                    'deskripsi' => 'Otomatis: total '.$totalLate.' menit terlambat dari '.$lateDays->count().' hari kehadiran pada '.$label.' ('.$block.' menit = '.$perBlock.' poin).',
+                    'dijatuhkan_pada' => $end->toDateString(),
                 ]);
                 $generated++;
             }
@@ -87,21 +87,21 @@ class RecognitionController extends Controller
     public function storeReward(Request $request)
     {
         $data = $request->validate([
-            'employee_id' => ['required', 'exists:employees,id'],
-            'type' => ['required', 'in:bonus,points'],
-            'amount' => ['nullable', 'numeric', 'min:0'],
-            'points' => ['nullable', 'integer', 'min:0'],
-            'title' => ['required', 'string', 'max:150'],
-            'description' => ['nullable', 'string', 'max:2000'],
-            'awarded_at' => ['required', 'date'],
+            'karyawan_id' => ['required', 'exists:karyawan,id'],
+            'jenis' => ['required', 'in:bonus,points'],
+            'nominal' => ['nullable', 'numeric', 'min:0'],
+            'poin' => ['nullable', 'integer', 'min:0'],
+            'judul' => ['required', 'string', 'max:150'],
+            'deskripsi' => ['nullable', 'string', 'max:2000'],
+            'diberikan_pada' => ['required', 'date'],
         ]);
-        // Kolom amount/points NOT NULL: nol-kan field yang tidak relevan dengan tipe.
-        if ($data['type'] === 'points') {
-            $data['amount'] = 0;
-            $data['points'] ??= 0;
+        // Kolom nominal/poin NOT NULL: nol-kan field yang tidak relevan dengan tipe.
+        if ($data['jenis'] === 'points') {
+            $data['nominal'] = 0;
+            $data['poin'] ??= 0;
         } else {
-            $data['points'] = 0;
-            $data['amount'] ??= 0;
+            $data['poin'] = 0;
+            $data['nominal'] ??= 0;
         }
         Reward::create($data);
 
@@ -111,15 +111,15 @@ class RecognitionController extends Controller
     public function storePunishment(Request $request)
     {
         $data = $request->validate([
-            'employee_id' => ['required', 'exists:employees,id'],
-            'type' => ['required', 'in:warning,points_deduction,salary_deduction,administrative'],
-            'amount' => ['nullable', 'numeric', 'min:0'],
-            'title' => ['required', 'string', 'max:150'],
-            'description' => ['nullable', 'string', 'max:2000'],
-            'issued_at' => ['required', 'date'],
+            'karyawan_id' => ['required', 'exists:karyawan,id'],
+            'jenis' => ['required', 'in:warning,points_deduction,salary_deduction,administrative'],
+            'nominal' => ['nullable', 'numeric', 'min:0'],
+            'judul' => ['required', 'string', 'max:150'],
+            'deskripsi' => ['nullable', 'string', 'max:2000'],
+            'dijatuhkan_pada' => ['required', 'date'],
         ]);
-        // Kolom amount NOT NULL: punishment tanpa nominal (mis. peringatan) disimpan 0.
-        $data['amount'] ??= 0;
+        // Kolom nominal NOT NULL: punishment tanpa nominal (mis. peringatan) disimpan 0.
+        $data['nominal'] ??= 0;
         Punishment::create($data);
 
         return back()->with('success', 'Punishment berhasil ditambahkan.');

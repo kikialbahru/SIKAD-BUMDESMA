@@ -13,7 +13,7 @@ class HolidayController extends Controller
             'year' => ['nullable', 'integer', 'min:2020', 'max:2100'],
         ]);
         $year = (int) ($data['year'] ?? now()->year);
-        $holidays = Holiday::whereYear('holiday_date', $year)->orderBy('holiday_date')->get();
+        $holidays = Holiday::whereYear('tanggal', $year)->orderBy('tanggal')->get();
 
         return view('holidays.index', [
             'holidays' => $holidays,
@@ -25,11 +25,11 @@ class HolidayController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'holiday_date' => ['required', 'date', 'unique:holidays,holiday_date'],
-            'name' => ['required', 'string', 'max:100'],
+            'tanggal' => ['required', 'date', 'unique:hari_libur,tanggal'],
+            'nama' => ['required', 'string', 'max:100'],
         ]);
 
-        Holiday::create($request->only('holiday_date', 'name'));
+        Holiday::create($request->only('tanggal', 'nama'));
 
         return back()->with('success', 'Hari libur berhasil ditambahkan dan otomatis dikecualikan dari hitungan hari kerja.');
     }
@@ -37,11 +37,11 @@ class HolidayController extends Controller
     public function update(Request $request, Holiday $holiday)
     {
         $request->validate([
-            'holiday_date' => ['required', 'date', 'unique:holidays,holiday_date,'.$holiday->id],
-            'name' => ['required', 'string', 'max:100'],
+            'tanggal' => ['required', 'date', 'unique:hari_libur,tanggal,'.$holiday->id],
+            'nama' => ['required', 'string', 'max:100'],
         ]);
 
-        $holiday->update($request->only('holiday_date', 'name'));
+        $holiday->update($request->only('tanggal', 'nama'));
 
         return back()->with('success', 'Hari libur berhasil diperbarui.');
     }

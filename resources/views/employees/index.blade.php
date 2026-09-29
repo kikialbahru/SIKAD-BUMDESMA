@@ -23,13 +23,13 @@
                 <div class="col-md-3">
                     <label class="form-label small">Jabatan</label>
                     <select class="form-select"
-                        name="position_id">
+                        name="jabatan_id">
                         <option value="">Semua jabatan</option>
                         @foreach ($positions as $position)
                             <option
                                 value="{{ $position->id }}"
-                                @selected(($filters['position_id'] ?? '') == $position->id)>
-                            {{ $position->name }}
+                                @selected(($filters['jabatan_id'] ?? '') == $position->id)>
+                            {{ $position->nama }}
                             </option>
                         @endforeach
                     </select>
@@ -81,8 +81,8 @@
                             <td>
                                 <a href="{{ route('employees.show', $employee) }}" class="text-decoration-none">
                                     <div class="employee-thumb">
-                                        @if ($employee->photo)
-                                            <img src="{{ asset('storage/' . $employee->photo) }}"
+                                        @if ($employee->foto)
+                                            <img src="{{ asset('storage/' . $employee->foto) }}"
                                             alt="Foto {{ $employee->display_name }}">
                                             @else
                                             <span>
@@ -96,7 +96,7 @@
                                 <a href="{{ route('employees.show', $employee) }}"
                                     class="text-decoration-none">
                                     <strong>
-                                        {{ $employee->employee_code }}
+                                        {{ $employee->kode_karyawan }}
                                     </strong>
                                     </a>
                                     </td>
@@ -112,7 +112,7 @@
                                     {{ $employee->display_email ?? 'Email tidak tersedia' }}
                                     </small>
                             </td>
-                            <td>{{ $employee->position?->name ?? '-' }}</td>
+                            <td>{{ $employee->position?->nama ?? '-' }}</td>
                             <td>
                                 @if ($employee->user)
                                     <span class="badge text-bg-success">
@@ -126,11 +126,11 @@
                                             </i>Belum Dibuat</span>
                                 @endif
                             </td>
-                            <td>{{ $employee->joined_at?->format('d M Y') ?? '-' }}</td>
+                            <td>{{ $employee->tanggal_masuk?->format('d M Y') ?? '-' }}</td>
                             <td>
                                 <span
-                                    class="badge text-bg-{{ $employee->is_active ? 'success' : 'secondary' }}">
-                                    {{ $employee->is_active ? 'Aktif' : 'Nonaktif' }}
+                                    class="badge text-bg-{{ $employee->aktif ? 'success' : 'secondary' }}">
+                                    {{ $employee->aktif ? 'Aktif' : 'Nonaktif' }}
                                     </span>
                             </td>
                             <td class="text-nowrap">
@@ -152,7 +152,7 @@
                                             class="bi bi-person-plus">
                                             </i>
                                             </button>
-                                    @endif @if ($employee->is_active)
+                                    @endif @if ($employee->aktif)
                                         <form class="d-inline" method="POST"
                                             action="{{ route('employees.destroy', $employee) }}"
                                             data-confirm="Data karyawan akan dinonaktifkan. Lanjutkan?">@csrf
@@ -190,7 +190,7 @@
                         </div>
                         <div class="modal-body">
                             <p class="text-secondary small">Akun dibuat dengan role <strong>Karyawan</strong> dan terhubung
-                                ke {{ $employee->employee_code }}.</p>
+                                ke {{ $employee->kode_karyawan }}.</p>
                             <div class="mb-3">
                                 <label class="form-label">Email</label>
                                 <input class="form-control"

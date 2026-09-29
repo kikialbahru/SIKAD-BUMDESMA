@@ -31,7 +31,7 @@ class AuthController extends Controller
             return back()->withErrors(['email' => 'Email atau password tidak sesuai.'])->onlyInput('email');
         }
 
-        if (! $request->user()->isAdmin() && $request->user()->employee && ! $request->user()->employee->is_active) {
+        if (! $request->user()->isAdmin() && $request->user()->employee && ! $request->user()->employee->aktif) {
             Auth::logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();

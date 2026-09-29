@@ -7,11 +7,11 @@
         </i>Kembali ke Data Kehadiran</a>
     <h1 class="h3 mt-3 mb-1">Koreksi Absensi</h1>
     <p class="text-secondary mb-0">
-        {{ $attendance->employee?->display_name }} ({{ $attendance->employee?->employee_code }}) · {{ $attendance->attendance_date->translatedFormat('l, d F Y') }}
+        {{ $attendance->employee?->display_name }} ({{ $attendance->employee?->kode_karyawan }}) · {{ $attendance->tanggal->translatedFormat('l, d F Y') }}
     </p>
 </div>
 
-@if($attendance->check_in_photo || $attendance->check_out_photo)
+@if($attendance->foto_masuk || $attendance->foto_pulang)
 <div class="alert alert-warning d-flex align-items-center gap-2">
     <i class="bi bi-exclamation-triangle-fill">
     </i>

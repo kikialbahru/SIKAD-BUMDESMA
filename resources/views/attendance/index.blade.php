@@ -59,23 +59,23 @@
                         <div class="col-6 col-lg-2">
                             <label class="form-label small">Karyawan</label>
                             <select class="form-select"
-                                name="employee_id">
+                                name="karyawan_id">
                                 <option value="">Semua karyawan</option>
                                 @foreach ($employees as $employee)
                                     <option
                                         value="{{ $employee->id }}"
-                                        @selected((string) ($filters['employee_id'] ?? '') === (string) $employee->id)>
-                                        {{ $employee->employee_code }}</option>
+                                        @selected((string) ($filters['karyawan_id'] ?? '') === (string) $employee->id)>
+                                        {{ $employee->kode_karyawan }}</option>
                                 @endforeach
                             </select>
                         </div>
                     @endif
                     <div class="col-6 col-lg-2">
                         <label class="form-label small">Status Pulang</label>
-                        <select class="form-select" name="checkout_status">
+                        <select class="form-select" name="status_pulang">
                             <option value="">Semua</option>
                             @foreach (['waiting' => 'Menunggu', 'approved' => 'Diizinkan', 'rejected' => 'Ditolak', 'checked_out' => 'Sudah Pulang'] as $value => $label)
-                                <option value="{{ $value }}" @selected(($filters['checkout_status'] ?? '') === $value)>
+                                <option value="{{ $value }}" @selected(($filters['status_pulang'] ?? '') === $value)>
                                     {{ $label }}
                                 </option>
                             @endforeach
@@ -149,15 +149,15 @@
                                     </strong>
                                     <small
                                         class="d-block text-secondary">
-                                        {{ $attendance->employee?->employee_code }}
+                                        {{ $attendance->employee?->kode_karyawan }}
                                         </small>
                                         </td>
-                                <td>{{ $attendance->attendance_date->format('d M Y') }}</td>
-                                <td>{{ $attendance->check_in_at?->format('H:i') ?? '-' }}</td>
-                                <td>{{ $attendance->check_out_at?->format('H:i') ?? '-' }}</td>
+                                <td>{{ $attendance->tanggal->format('d M Y') }}</td>
+                                <td>{{ $attendance->waktu_masuk?->format('H:i') ?? '-' }}</td>
+                                <td>{{ $attendance->waktu_pulang?->format('H:i') ?? '-' }}</td>
                                 <td>
-                                    {{ intdiv($attendance->work_minutes, 60) }}j {{ $attendance->work_minutes % 60 }}m</td>
-                                <td>{{ $attendance->late_minutes }} menit</td>
+                                    {{ intdiv($attendance->menit_kerja, 60) }}j {{ $attendance->menit_kerja % 60 }}m</td>
+                                <td>{{ $attendance->menit_telat }} menit</td>
                                 <td>
                                     <span
                                         class="badge text-bg-{{ $attendance->status === 'late' ? 'warning' : ($attendance->status === 'present' ? 'success' : 'secondary') }}">
@@ -166,24 +166,24 @@
                                 </td>
                                 <td>
                                     <div class="d-flex gap-1">
-                                        @if ($attendance->check_in_photo)
+                                        @if ($attendance->foto_masuk)
                                             <a href="{{ route('attendance.show', $attendance) }}" title="Foto masuk">
                                                 <img
-                                                    src="{{ asset('storage/' . $attendance->check_in_photo) }}" width="32"
+                                                     src="{{ asset('storage/' . $attendance->foto_masuk) }}" width="32"
                                                     height="32" class="rounded border" style="object-fit:cover"
                                                     alt="Masuk">
                                                     </a>
-                                            @endif @if ($attendance->check_out_photo)
+                                            @endif @if ($attendance->foto_pulang)
                                                 <a
                                                     href="{{ route('attendance.show', $attendance) }}"
                                                     title="Foto pulang">
                                                 <img
-                                                        src="{{ asset('storage/' . $attendance->check_out_photo) }}"
+                                                         src="{{ asset('storage/' . $attendance->foto_pulang) }}"
                                                         width="32" height="32" class="rounded border"
                                                         style="object-fit:cover" alt="Pulang">
                                                         </a>
-                                            @endif @unless ($attendance->check_in_photo || $attendance->check_out_photo)
-                                            @if ($attendance->check_in_at)
+                                            @endif @unless ($attendance->foto_masuk || $attendance->foto_pulang)
+                                            @if ($attendance->waktu_masuk)
                                                 <span
                                                     class="badge text-bg-info"
                                                     title="Dicatat manual oleh admin tanpa foto/GPS">Manual</span>
@@ -194,12 +194,12 @@
                                 </div>
                             </td>
                             <td>
-                                @if ($attendance->check_in_latitude && $attendance->check_in_longitude)
-                                    @if ($attendance->check_in_location_valid === true)
+                                @if ($attendance->lintang_masuk && $attendance->bujur_masuk)
+                                    @if ($attendance->lokasi_masuk_valid === true)
                                         <span class="badge text-bg-success">
                                             <i class="bi bi-geo-alt me-1">
                                             </i>Sesuai</span>
-                                    @elseif($attendance->check_in_location_valid === false)
+                                    @elseif($attendance->lokasi_masuk_valid === false)
                                         <span class="badge text-bg-danger">
                                             <i class="bi bi-geo-alt me-1">
                                             </i>Di luar
@@ -213,26 +213,26 @@
                             </td>
                             @if (auth()->user()->isAdmin())
                                 <td>
-                                    @if ($attendance->check_out_at)
+                                    @if ($attendance->waktu_pulang)
                                         <span class="badge text-bg-success">
                                             <i class="bi bi-check-circle me-1">
                                             </i>Sudah
                                             Pulang</span>
-                                    @elseif($attendance->checkout_status === 'approved')
+                                    @elseif($attendance->status_pulang === 'approved')
                                         <span class="badge text-bg-success">
                                             <i
                                                 class="bi bi-check-circle me-1">
                                                 </i>Diizinkan
-                                            {{ \App\Services\CheckoutPolicy::TYPE_LABELS[$attendance->checkout_approval_type] ?? '' }}
+                                            {{ \App\Services\CheckoutPolicy::TYPE_LABELS[$attendance->tipe_persetujuan_pulang] ?? '' }}
                                             </span>
-                                    @elseif($attendance->checkout_status === 'rejected')
+                                    @elseif($attendance->status_pulang === 'rejected')
                                     <span class="badge text-bg-danger">Ditolak</span> @else<span
                                             class="badge text-bg-secondary">Belum Pulang</span>
                                     @endif
                                 </td>
                                 <td class="text-nowrap">
-                                    @if ($attendance->attendance_date->isToday() && !$attendance->check_out_at)
-                                        @if ($attendance->checkout_status === 'approved')
+                                    @if ($attendance->tanggal->isToday() && !$attendance->waktu_pulang)
+                                        @if ($attendance->status_pulang === 'approved')
                                         <span class="badge text-bg-success">Diizinkan</span> @else<form
                                                 class="d-inline" method="POST"
                                                 action="{{ route('attendance.approval', $attendance) }}"> @csrf

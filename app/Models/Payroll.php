@@ -7,25 +7,27 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Payroll extends Model
 {
+    protected $table = 'penggajian';
+
     protected $fillable = [
-        'employee_id', 'period_start', 'period_end', 'basic_salary', 'attendance_allowance',
-        'reward_total', 'late_deduction', 'absence_deduction', 'punishment_total', 'net_salary', 'status',
+        'karyawan_id', 'periode_mulai', 'periode_selesai', 'gaji_pokok', 'tunjangan_kehadiran',
+        'total_reward', 'potongan_telat', 'potongan_absen', 'total_hukuman', 'gaji_bersih', 'status',
     ];
 
     protected $casts = [
-        'period_start' => 'date',
-        'period_end' => 'date',
-        'basic_salary' => 'decimal:2',
-        'attendance_allowance' => 'decimal:2',
-        'reward_total' => 'decimal:2',
-        'late_deduction' => 'decimal:2',
-        'absence_deduction' => 'decimal:2',
-        'punishment_total' => 'decimal:2',
-        'net_salary' => 'decimal:2',
+        'periode_mulai' => 'date',
+        'periode_selesai' => 'date',
+        'gaji_pokok' => 'decimal:2',
+        'tunjangan_kehadiran' => 'decimal:2',
+        'total_reward' => 'decimal:2',
+        'potongan_telat' => 'decimal:2',
+        'potongan_absen' => 'decimal:2',
+        'total_hukuman' => 'decimal:2',
+        'gaji_bersih' => 'decimal:2',
     ];
 
     public function employee(): BelongsTo
     {
-        return $this->belongsTo(Employee::class);
+        return $this->belongsTo(Employee::class, 'karyawan_id');
     }
 }

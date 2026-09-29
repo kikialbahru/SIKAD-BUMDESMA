@@ -34,9 +34,9 @@ class AttendanceManagementTest extends TestCase
             'password' => Hash::make('password'),
         ]);
         Employee::create([
-            'user_id' => $user->id,
-            'employee_code' => 'KRY-'.substr(str_replace(['@', '.', '-'], '', $email), 0, 10),
-            'is_active' => true,
+            'pengguna_id' => $user->id,
+            'kode_karyawan' => 'KRY-'.substr(str_replace(['@', '.', '-'], '', $email), 0, 10),
+            'aktif' => true,
         ]);
 
         return $user;
@@ -49,23 +49,23 @@ class AttendanceManagementTest extends TestCase
         $employee = $this->employeeUser()->employee;
 
         $response = $this->actingAs($admin)->post(route('attendance.corrections.store'), [
-            'employee_id' => $employee->id,
-            'attendance_date' => '2026-09-16',
-            'check_in' => '08:05',
-            'check_out' => '15:00',
+            'karyawan_id' => $employee->id,
+            'tanggal' => '2026-09-16',
+            'jam_masuk' => '08:05',
+            'jam_pulang' => '15:00',
             'status' => 'present',
-            'note' => 'Lupa absen, HP mati.',
+            'catatan' => 'Lupa absen, HP mati.',
         ]);
 
         $response->assertRedirect(route('attendance.index'));
         $attendance = Attendance::first();
-        $this->assertEquals('2026-09-16 08:05:00', $attendance->check_in_at->format('Y-m-d H:i:s'));
-        $this->assertEquals(5, $attendance->late_minutes);
+        $this->assertEquals('2026-09-16 08:05:00', $attendance->waktu_masuk->format('Y-m-d H:i:s'));
+        $this->assertEquals(5, $attendance->menit_telat);
         $this->assertEquals('late', $attendance->status);
-        $this->assertEquals(415, $attendance->work_minutes);
-        $this->assertEquals('checked_out', $attendance->checkout_status);
-        $this->assertEquals('Lupa absen, HP mati.', $attendance->note);
-        $this->assertNull($attendance->check_in_photo);
+        $this->assertEquals(415, $attendance->menit_kerja);
+        $this->assertEquals('checked_out', $attendance->status_pulang);
+        $this->assertEquals('Lupa absen, HP mati.', $attendance->catatan);
+        $this->assertNull($attendance->foto_masuk);
     }
 
     public function test_manual_attendance_duplicate_date_rejected(): void
@@ -74,20 +74,20 @@ class AttendanceManagementTest extends TestCase
         $admin = $this->adminUser();
         $employee = $this->employeeUser()->employee;
         Attendance::create([
-            'employee_id' => $employee->id,
-            'attendance_date' => '2026-09-16',
-            'check_in_at' => '2026-09-16 08:00:00',
+            'karyawan_id' => $employee->id,
+            'tanggal' => '2026-09-16',
+            'waktu_masuk' => '2026-09-16 08:00:00',
             'status' => 'present',
         ]);
 
         $response = $this->actingAs($admin)->post(route('attendance.corrections.store'), [
-            'employee_id' => $employee->id,
-            'attendance_date' => '2026-09-16',
-            'check_in' => '08:00',
+            'karyawan_id' => $employee->id,
+            'tanggal' => '2026-09-16',
+            'jam_masuk' => '08:00',
             'status' => 'present',
         ]);
 
-        $response->assertSessionHasErrors('attendance_date');
+        $response->assertSessionHasErrors('tanggal');
         $this->assertEquals(1, Attendance::count());
     }
 
@@ -98,23 +98,23 @@ class AttendanceManagementTest extends TestCase
         $employee = $this->employeeUser()->employee;
 
         $response = $this->actingAs($admin)->post(route('attendance.corrections.store'), [
-            'employee_id' => $employee->id,
-            'attendance_date' => '2026-09-16',
+            'karyawan_id' => $employee->id,
+            'tanggal' => '2026-09-16',
             'status' => 'present',
         ]);
 
-        $response->assertSessionHasErrors('check_in');
+        $response->assertSessionHasErrors('jam_masuk');
 
         $this->actingAs($admin)->post(route('attendance.corrections.store'), [
-            'employee_id' => $employee->id,
-            'attendance_date' => '2026-09-16',
+            'karyawan_id' => $employee->id,
+            'tanggal' => '2026-09-16',
             'status' => 'sick',
-            'note' => 'Sakit, ada surat dokter.',
+            'catatan' => 'Sakit, ada surat dokter.',
         ])->assertRedirect(route('attendance.index'));
 
         $attendance = Attendance::first();
         $this->assertEquals('sick', $attendance->status);
-        $this->assertNull($attendance->check_in_at);
+        $this->assertNull($attendance->waktu_masuk);
     }
 
     public function test_admin_can_update_correction_and_resets_approval(): void
@@ -123,32 +123,32 @@ class AttendanceManagementTest extends TestCase
         $admin = $this->adminUser();
         $employee = $this->employeeUser()->employee;
         $attendance = Attendance::create([
-            'employee_id' => $employee->id,
-            'attendance_date' => '2026-09-16',
-            'check_in_at' => '2026-09-16 08:00:00',
-            'check_out_at' => '2026-09-16 14:00:00',
+            'karyawan_id' => $employee->id,
+            'tanggal' => '2026-09-16',
+            'waktu_masuk' => '2026-09-16 08:00:00',
+            'waktu_pulang' => '2026-09-16 14:00:00',
             'status' => 'present',
-            'checkout_status' => 'approved',
-            'checkout_approval_type' => 'early',
-            'checkout_approved_by' => $admin->id,
-            'checkout_approved_at' => now(),
+            'status_pulang' => 'approved',
+            'tipe_persetujuan_pulang' => 'early',
+            'disetujui_oleh' => $admin->id,
+            'disetujui_pada' => now(),
         ]);
 
         $response = $this->actingAs($admin)->put(route('attendance.corrections.update', $attendance), [
-            'employee_id' => $employee->id,
-            'attendance_date' => '2026-09-16',
-            'check_in' => '08:10',
-            'check_out' => '15:00',
+            'karyawan_id' => $employee->id,
+            'tanggal' => '2026-09-16',
+            'jam_masuk' => '08:10',
+            'jam_pulang' => '15:00',
             'status' => 'present',
         ]);
 
         $response->assertRedirect(route('attendance.index'));
         $attendance->refresh();
-        $this->assertEquals(10, $attendance->late_minutes);
+        $this->assertEquals(10, $attendance->menit_telat);
         $this->assertEquals('late', $attendance->status);
-        $this->assertEquals('checked_out', $attendance->checkout_status);
-        $this->assertNull($attendance->checkout_approved_by);
-        $this->assertNull($attendance->checkout_approval_type);
+        $this->assertEquals('checked_out', $attendance->status_pulang);
+        $this->assertNull($attendance->disetujui_oleh);
+        $this->assertNull($attendance->tipe_persetujuan_pulang);
     }
 
     public function test_admin_can_view_correction_forms_and_index(): void
@@ -157,11 +157,11 @@ class AttendanceManagementTest extends TestCase
         $admin = $this->adminUser();
         $employee = $this->employeeUser()->employee;
         $attendance = Attendance::create([
-            'employee_id' => $employee->id,
-            'attendance_date' => '2026-09-16',
-            'check_in_at' => '2026-09-16 08:00:00',
+            'karyawan_id' => $employee->id,
+            'tanggal' => '2026-09-16',
+            'waktu_masuk' => '2026-09-16 08:00:00',
             'status' => 'present',
-            'note' => 'Koreksi percobaan.',
+            'catatan' => 'Koreksi percobaan.',
         ]);
 
         $this->actingAs($admin)->get(route('attendance.corrections.create'))
@@ -183,8 +183,8 @@ class AttendanceManagementTest extends TestCase
     {
         $user = $this->employeeUser();
         $attendance = Attendance::create([
-            'employee_id' => $user->employee->id,
-            'attendance_date' => '2026-09-16',
+            'karyawan_id' => $user->employee->id,
+            'tanggal' => '2026-09-16',
             'status' => 'present',
         ]);
 
@@ -205,8 +205,8 @@ class AttendanceManagementTest extends TestCase
         $admin = $this->adminUser();
 
         $this->actingAs($admin)->post(route('holidays.store'), [
-            'holiday_date' => '2026-12-25',
-            'name' => 'Hari Raya Natal',
+            'tanggal' => '2026-12-25',
+            'nama' => 'Hari Raya Natal',
         ])->assertRedirect();
 
         $this->actingAs($admin)->get(route('holidays.index', ['year' => 2026]))
@@ -215,10 +215,10 @@ class AttendanceManagementTest extends TestCase
 
         $holiday = Holiday::first();
         $this->actingAs($admin)->put(route('holidays.update', $holiday), [
-            'holiday_date' => '2026-12-25',
-            'name' => 'Natal Bersama',
+            'tanggal' => '2026-12-25',
+            'nama' => 'Natal Bersama',
         ])->assertRedirect();
-        $this->assertEquals('Natal Bersama', $holiday->fresh()->name);
+        $this->assertEquals('Natal Bersama', $holiday->fresh()->nama);
 
         $this->actingAs($admin)->delete(route('holidays.destroy', $holiday))->assertRedirect();
         $this->assertEquals(0, Holiday::count());
@@ -227,12 +227,12 @@ class AttendanceManagementTest extends TestCase
     public function test_holiday_duplicate_date_rejected(): void
     {
         $admin = $this->adminUser();
-        Holiday::create(['holiday_date' => '2026-12-25', 'name' => 'Natal']);
+        Holiday::create(['tanggal' => '2026-12-25', 'nama' => 'Natal']);
 
         $this->actingAs($admin)->post(route('holidays.store'), [
-            'holiday_date' => '2026-12-25',
-            'name' => 'Libur lain',
-        ])->assertSessionHasErrors('holiday_date');
+            'tanggal' => '2026-12-25',
+            'nama' => 'Libur lain',
+        ])->assertSessionHasErrors('tanggal');
 
         $this->assertEquals(1, Holiday::count());
     }

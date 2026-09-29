@@ -7,12 +7,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class WorkSchedule extends Model
 {
-    protected $fillable = ['name', 'start_time', 'end_time', 'late_tolerance_minutes', 'working_days', 'is_active'];
+    protected $table = 'jadwal_kerja';
 
-    protected $casts = ['working_days' => 'array', 'is_active' => 'boolean'];
+    protected $fillable = ['nama', 'jam_masuk', 'jam_pulang', 'toleransi_telat_menit', 'hari_kerja', 'aktif'];
+
+    protected $casts = ['hari_kerja' => 'array', 'aktif' => 'boolean'];
 
     public function employees(): HasMany
     {
-        return $this->hasMany(Employee::class);
+        return $this->hasMany(Employee::class, 'jadwal_kerja_id');
     }
 }

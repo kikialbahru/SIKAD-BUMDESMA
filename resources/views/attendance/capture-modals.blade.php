@@ -1,7 +1,7 @@
 @unless(auth()->user()->isAdmin())
 @php($captureOffice = \App\Models\AttendanceLocation::active())
 @foreach([['in', 'Masuk', 'masuk', route('attendance.check-in', [], false)], ['out', 'Pulang', 'pulang', route('attendance.check-out', [], false)]] as [$suffix, $label, $type, $url])
-@php($modalOffice = $captureOffice ? ['name' => $captureOffice->name, 'lat' => (float) $captureOffice->latitude, 'lng' => (float) $captureOffice->longitude, 'radius' => (int) $captureOffice->radius_meters, 'enforce' => $suffix === 'out' ? (bool) $captureOffice->enforce_checkout_radius : (bool) $captureOffice->enforce_radius] : null)
+@php($modalOffice = $captureOffice ? ['name' => $captureOffice->nama, 'lat' => (float) $captureOffice->lintang, 'lng' => (float) $captureOffice->bujur, 'radius' => (int) $captureOffice->radius_meter, 'enforce' => $suffix === 'out' ? (bool) $captureOffice->wajib_radius_pulang : (bool) $captureOffice->wajib_radius] : null)
 <div
     class="modal fade"
     id="check{{ ucfirst($suffix) }}Modal"
@@ -257,10 +257,10 @@
             btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Menyimpan absensi...';
             try {
                 const form = new FormData();
-                form.append('photo', photoBlob, 'selfie.jpg');
-                form.append('latitude', coords.lat);
-                form.append('longitude', coords.lng);
-                form.append('accuracy', coords.acc);
+                form.append('foto', photoBlob, 'selfie.jpg');
+                form.append('lintang', coords.lat);
+                form.append('bujur', coords.lng);
+                form.append('akurasi', coords.acc);
                 const res = await fetch(modal.dataset.url, {
                     method: 'POST',
                     headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF },
@@ -277,8 +277,8 @@
                 modal.querySelector('[data-role="done-date"]').textContent = data.date || '-';
                 modal.querySelector('[data-role="done-time"]').textContent = data.time || '-';
                 modal.querySelector('[data-role="done-location"]').textContent = office ? office.name : 'Tercatat';
-                modal.querySelector('[data-role="done-coords"]').textContent = data.latitude + ', ' + data.longitude;
-                modal.querySelector('[data-role="done-accuracy"]').textContent = '±' + data.accuracy + ' meter';
+                modal.querySelector('[data-role="done-coords"]').textContent = data.lintang + ', ' + data.bujur;
+                modal.querySelector('[data-role="done-accuracy"]').textContent = '±' + data.akurasi + ' meter';
                 modal.querySelector('[data-role="done-status"]').textContent = data.status === 'late' ? 'Terlambat' : 'Hadir';
                 modal.querySelector('[data-role="done-link"]').href = data.detail_url;
                 showStep('done');

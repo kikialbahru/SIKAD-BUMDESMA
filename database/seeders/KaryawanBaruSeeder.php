@@ -13,12 +13,12 @@ class KaryawanBaruSeeder extends Seeder
 {
     public function run(): void
     {
-        $position = Position::updateOrCreate(['name' => 'Staff'], ['description' => 'Staff BUMDESMA LKD TARUB']);
-        $schedule = WorkSchedule::firstOrCreate(['name' => 'Jam Kerja Reguler'], [
-            'start_time' => '08:00',
-            'end_time' => '15:00',
-            'late_tolerance_minutes' => 15,
-            'working_days' => ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
+        $position = Position::updateOrCreate(['nama' => 'Staff'], ['deskripsi' => 'Staff BUMDESMA LKD TARUB']);
+        $schedule = WorkSchedule::firstOrCreate(['nama' => 'Jam Kerja Reguler'], [
+            'jam_masuk' => '08:00',
+            'jam_pulang' => '15:00',
+            'toleransi_telat_menit' => 15,
+            'hari_kerja' => ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
         ]);
 
         // Karyawan tetap (password awal "12345678", wajib diganti setelah login pertama).
@@ -40,12 +40,13 @@ class KaryawanBaruSeeder extends Seeder
                 'password' => Hash::make('12345678'),
             ]);
 
-            Employee::updateOrCreate(['employee_code' => $item['code']], [
-                'user_id' => $user->id,
-                'position_id' => $position->id,
-                'work_schedule_id' => $schedule->id,
-                'joined_at' => now()->toDateString(),
-                'is_active' => true,
+            Employee::updateOrCreate(['kode_karyawan' => $item['code']], [
+                'pengguna_id' => $user->id,
+                'nama' => $item['name'],
+                'jabatan_id' => $position->id,
+                'jadwal_kerja_id' => $schedule->id,
+                'tanggal_masuk' => now()->toDateString(),
+                'aktif' => true,
             ]);
         }
     }

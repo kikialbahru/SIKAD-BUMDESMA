@@ -19,6 +19,7 @@ class ProfileController extends Controller
         return view('profile.index', [
             'user' => $user,
             'employee' => $employee?->load('user', 'position', 'workSchedule'),
+            'photoCooldown' => $employee ? $this->photoCooldown($employee) : null,
             'title' => 'Profil Saya',
         ]);
     }
@@ -44,15 +45,15 @@ class ProfileController extends Controller
         abort_unless($employee || $user->isAdmin(), 404, 'Data karyawan belum terhubung ke akun ini.');
 
         $data = $request->validate([
-            'name' => ['required', 'string', 'max:100'],
+            'nama' => ['required', 'string', 'max:100'],
             'email' => ['required', 'email', 'max:150', Rule::unique('users', 'email')->ignore($user->id)],
-            'phone' => ['nullable', 'string', 'max:30'],
+            'telepon' => ['nullable', 'string', 'max:30'],
         ]);
 
         DB::transaction(function () use ($data, $user, $employee) {
-            $user->update(['name' => $data['name'], 'email' => $data['email']]);
+            $user->update(['name' => $data['nama'], 'email' => $data['email']]);
             if ($employee) {
-                $employee->update(['name' => $data['name'], 'email' => $data['email'], 'phone' => $data['phone']]);
+                $employee->update(['nama' => $data['nama'], 'email' => $data['email'], 'telepon' => $data['telepon']]);
             }
         });
 
@@ -65,26 +66,26 @@ class ProfileController extends Controller
         abort_unless($employee, 404, 'Akun administrator tidak memiliki foto profil karyawan.');
 
         if ($cooldown = $this->photoCooldown($employee)) {
-            return back()->with('error', 'Foto profil hanya dapat diganti 1 minggu sekali. Silakan coba lagi pada '.$cooldown['available_at']->translatedFormat('d F Y').'.');
+            return back()->with('error', 'Foto profil hanya dapat diganti 1 minggu sekali. Dapat diganti lagi pada '.$cooldown['available_at']->translatedFormat('d F Y').' ('.$cooldown['days_left'].' hari lagi).');
         }
 
-        if ($request->boolean('remove_photo')) {
-            if ($employee->photo) {
-                Storage::disk('public')->delete($employee->photo);
-                $employee->update(['photo' => null, 'photo_updated_at' => now()]);
+        if ($request->boolean('hapus_foto')) {
+            if ($employee->foto) {
+                Storage::disk('public')->delete($employee->foto);
+                $employee->update(['foto' => null, 'foto_diubah_pada' => now()]);
             }
 
             return back()->with('success', 'Foto profil berhasil dihapus.');
         }
 
         $request->validate([
-            'photo' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            'foto' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
         ]);
 
-        if ($employee->photo) {
-            Storage::disk('public')->delete($employee->photo);
+        if ($employee->foto) {
+            Storage::disk('public')->delete($employee->foto);
         }
-        $employee->update(['photo' => $request->file('photo')->store('employee-photos', 'public'), 'photo_updated_at' => now()]);
+        $employee->update(['foto' => $request->file('foto')->store('employee-photos', 'public'), 'foto_diubah_pada' => now()]);
 
         return back()->with('success', 'Foto profil berhasil diperbarui.');
     }
@@ -116,10 +117,10 @@ class ProfileController extends Controller
      */
     private function photoCooldown($employee): ?array
     {
-        if (! $employee->photo_updated_at) {
+        if (! $employee->foto_diubah_pada) {
             return null;
         }
-        $availableAt = $employee->photo_updated_at->copy()->addWeek();
+        $availableAt = $employee->foto_diubah_pada->copy()->addWeek();
         if (! now()->lt($availableAt)) {
             return null;
         }

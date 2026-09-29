@@ -5,9 +5,13 @@ namespace App\Http\Controllers;
 use App\Models\Attendance;
 use App\Models\LeaveQuota;
 use App\Models\LeaveRequest;
+use App\Models\User;
+use App\Notifications\LeaveRequestReviewed;
+use App\Notifications\LeaveRequestSubmitted;
 use Carbon\CarbonPeriod;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -18,7 +22,7 @@ class LeaveRequestController extends Controller
     {
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:100'],
-            'type' => ['nullable', 'in:leave,sick'],
+            'jenis' => ['nullable', 'in:leave,sick'],
             'status' => ['nullable', 'in:pending,approved,rejected'],
             'date_from' => ['nullable', 'date'],
             'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
@@ -26,21 +30,21 @@ class LeaveRequestController extends Controller
 
         $query = LeaveRequest::with('employee.user', 'employee.position', 'reviewer')->latest();
         if (! $request->user()->isAdmin()) {
-            $query->where('employee_id', $request->user()->employee?->id ?? 0);
+            $query->where('karyawan_id', $request->user()->employee?->id ?? 0);
         }
         if (! empty($filters['search'])) {
             $search = $filters['search'];
             $query->whereHas('employee', fn ($employeeQuery) => $employeeQuery
-                ->where('employee_code', 'like', '%'.$search.'%')
-                ->orWhere('name', 'like', '%'.$search.'%')
+                ->where('kode_karyawan', 'like', '%'.$search.'%')
+                ->orWhere('nama', 'like', '%'.$search.'%')
                 ->orWhereHas('user', fn ($userQuery) => $userQuery->where('name', 'like', '%'.$search.'%')));
         }
-        $query->when($filters['type'] ?? null, fn ($query, $type) => $query->where('type', $type));
+        $query->when($filters['jenis'] ?? null, fn ($query, $type) => $query->where('jenis', $type));
         $query->when($filters['status'] ?? null, fn ($query, $status) => $query->where('status', $status));
         if (! empty($filters['date_from']) || ! empty($filters['date_to'])) {
             $from = $filters['date_from'] ?? '1970-01-01';
             $to = $filters['date_to'] ?? '2999-12-31';
-            $query->whereDate('start_date', '<=', $to)->whereDate('end_date', '>=', $from);
+            $query->whereDate('tanggal_mulai', '<=', $to)->whereDate('tanggal_selesai', '>=', $from);
         }
 
         $stats = null;
@@ -65,10 +69,10 @@ class LeaveRequestController extends Controller
         $leaveRequest->load('employee.user', 'employee.position', 'reviewer');
 
         if (! $request->user()->isAdmin()) {
-            abort_if($leaveRequest->employee_id !== $request->user()->employee?->id, 403);
+            abort_if($leaveRequest->karyawan_id !== $request->user()->employee?->id, 403);
         }
 
-        $history = LeaveRequest::where('employee_id', $leaveRequest->employee_id)
+        $history = LeaveRequest::where('karyawan_id', $leaveRequest->karyawan_id)
             ->where('id', '!=', $leaveRequest->id)
             ->latest()
             ->limit(5)
@@ -77,7 +81,7 @@ class LeaveRequestController extends Controller
         return view('leave.show', [
             'leaveRequest' => $leaveRequest,
             'history' => $history,
-            'quota' => $leaveRequest->type === 'leave' && $leaveRequest->employee ? LeaveQuota::usage($leaveRequest->employee) : null,
+            'quota' => $leaveRequest->jenis === 'leave' && $leaveRequest->employee ? LeaveQuota::usage($leaveRequest->employee) : null,
             'title' => 'Detail Pengajuan Cuti & Sakit',
         ]);
     }
@@ -85,47 +89,123 @@ class LeaveRequestController extends Controller
     public function store(Request $request)
     {
         $employee = $request->user()->employee;
-        abort_unless($employee?->is_active, 403, 'Akun karyawan belum terhubung.');
+        abort_unless($employee?->aktif, 403, 'Akun karyawan belum terhubung.');
 
         $data = $request->validate([
-            'type' => ['required', 'in:leave,sick'],
-            'start_date' => ['required', 'date', 'after_or_equal:today'],
-            'end_date' => ['required', 'date', 'after_or_equal:start_date'],
-            'reason' => ['required', 'string', 'max:2000'],
-            'attachment' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:2048'],
+            'jenis' => ['required', 'in:leave,sick'],
+            'tanggal_mulai' => ['required', 'date', 'after_or_equal:today'],
+            'tanggal_selesai' => ['required', 'date', 'after_or_equal:tanggal_mulai'],
+            'alasan' => ['required', 'string', 'max:2000'],
+            'lampiran' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:2048'],
         ]);
-        $data['employee_id'] = $employee->id;
-        $data['total_days'] = CarbonPeriod::create($data['start_date'], $data['end_date'])->count();
-        $data['attachment_path'] = $request->file('attachment')?->store('leave-attachments');
+        $data['karyawan_id'] = $employee->id;
+        $data['jumlah_hari'] = CarbonPeriod::create($data['tanggal_mulai'], $data['tanggal_selesai'])->count();
+        $data['jalur_lampiran'] = $request->file('lampiran')?->store('leave-attachments');
 
         // Cuti wajib diajukan minimal 1 minggu (7 hari kalender) sebelumnya.
-        if ($data['type'] === 'leave' && $data['start_date'] < now()->addDays(7)->toDateString()) {
+        if ($data['jenis'] === 'leave' && $data['tanggal_mulai'] < now()->addDays(7)->toDateString()) {
             throw ValidationException::withMessages([
-                'start_date' => 'Pengajuan cuti minimal 1 minggu (7 hari) sebelum tanggal mulai cuti.',
+                'tanggal_mulai' => 'Pengajuan cuti minimal 1 minggu (7 hari) sebelum tanggal mulai cuti.',
             ]);
         }
 
-        LeaveRequest::create($data);
+        $leaveRequest = LeaveRequest::create($data);
+        $leaveRequest->load('employee');
+
+        Notification::send(User::where('role', 'admin')->get(), new LeaveRequestSubmitted($leaveRequest));
 
         return back()->with('success', 'Pengajuan berhasil dikirim dan menunggu persetujuan.');
+    }
+
+    /**
+     * Ubah pengajuan milik sendiri yang masih pending.
+     * Aturan validasi sama dengan pengajuan baru (termasuk 7 hari untuk cuti).
+     */
+    public function update(Request $request, LeaveRequest $leaveRequest)
+    {
+        $employee = $request->user()->employee;
+        abort_unless($employee?->aktif, 403, 'Akun karyawan belum terhubung.');
+        abort_if($leaveRequest->karyawan_id !== $employee->id, 403);
+
+        $data = $request->validate([
+            'jenis' => ['required', 'in:leave,sick'],
+            'tanggal_mulai' => ['required', 'date', 'after_or_equal:today'],
+            'tanggal_selesai' => ['required', 'date', 'after_or_equal:tanggal_mulai'],
+            'alasan' => ['required', 'string', 'max:2000'],
+            'lampiran' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:2048'],
+        ]);
+        $data['jumlah_hari'] = CarbonPeriod::create($data['tanggal_mulai'], $data['tanggal_selesai'])->count();
+
+        // Aturan 7 hari berlaku juga saat mengubah ke cuti.
+        if ($data['jenis'] === 'leave' && $data['tanggal_mulai'] < now()->addDays(7)->toDateString()) {
+            throw ValidationException::withMessages([
+                'tanggal_mulai' => 'Pengajuan cuti minimal 1 minggu (7 hari) sebelum tanggal mulai cuti.',
+            ]);
+        }
+
+        DB::transaction(function () use ($request, $leaveRequest, $data) {
+            $fresh = LeaveRequest::whereKey($leaveRequest->id)->lockForUpdate()->first();
+            abort_if($fresh->status !== 'pending', 422, 'Pengajuan sudah diproses admin dan tidak dapat diubah.');
+
+            $lampiran = $fresh->jalur_lampiran;
+            if ($request->hasFile('lampiran')) {
+                if ($lampiran) {
+                    Storage::disk('local')->delete($lampiran);
+                }
+                $lampiran = $request->file('lampiran')->store('leave-attachments');
+            }
+
+            $fresh->update([
+                'jenis' => $data['jenis'],
+                'tanggal_mulai' => $data['tanggal_mulai'],
+                'tanggal_selesai' => $data['tanggal_selesai'],
+                'jumlah_hari' => $data['jumlah_hari'],
+                'alasan' => $data['alasan'],
+                'jalur_lampiran' => $lampiran,
+            ]);
+        });
+
+        return redirect()->route('leave.show', $leaveRequest)->with('success', 'Pengajuan berhasil diubah.');
+    }
+
+    /**
+     * Batalkan (tarik kembali) pengajuan milik sendiri yang masih pending.
+     * Baris dihapus permanen + file lampiran ikut dihapus.
+     */
+    public function destroy(Request $request, LeaveRequest $leaveRequest)
+    {
+        $employee = $request->user()->employee;
+        abort_unless($employee?->aktif, 403, 'Akun karyawan belum terhubung.');
+        abort_if($leaveRequest->karyawan_id !== $employee->id, 403);
+
+        DB::transaction(function () use ($leaveRequest) {
+            $fresh = LeaveRequest::whereKey($leaveRequest->id)->lockForUpdate()->first();
+            abort_if($fresh->status !== 'pending', 422, 'Pengajuan sudah diproses admin dan tidak dapat dibatalkan.');
+            if ($fresh->jalur_lampiran) {
+                Storage::disk('local')->delete($fresh->jalur_lampiran);
+            }
+            $fresh->delete();
+        });
+
+        return redirect()->route('leave.index')->with('success', 'Pengajuan berhasil dibatalkan.');
     }
 
     public function attachment(Request $request, LeaveRequest $leaveRequest)
     {
         if (! $request->user()->isAdmin()) {
-            abort_if($leaveRequest->employee_id !== $request->user()->employee?->id, 403);
+            abort_if($leaveRequest->karyawan_id !== $request->user()->employee?->id, 403);
         }
-        abort_unless($leaveRequest->attachment_path && Storage::disk('local')->exists($leaveRequest->attachment_path), 404);
+        abort_unless($leaveRequest->jalur_lampiran && Storage::disk('local')->exists($leaveRequest->jalur_lampiran), 404);
 
-        return Storage::disk('local')->download($leaveRequest->attachment_path);
+        return Storage::disk('local')->download($leaveRequest->jalur_lampiran);
     }
 
     public function review(Request $request, LeaveRequest $leaveRequest)
     {
         $data = $request->validate([
             'status' => ['required', 'in:approved,rejected'],
-            'review_note' => ['nullable', 'string', 'max:2000'],
-            'rejection_reason' => [Rule::requiredIf($request->input('status') === 'rejected'), 'nullable', 'string', 'min:10', 'max:2000'],
+            'catatan_ulasan' => ['nullable', 'string', 'max:2000'],
+            'alasan_penolakan' => [Rule::requiredIf($request->input('status') === 'rejected'), 'nullable', 'string', 'min:10', 'max:2000'],
         ]);
 
         DB::transaction(function () use ($request, $leaveRequest, $data) {
@@ -134,19 +214,19 @@ class LeaveRequestController extends Controller
 
             if ($data['status'] === 'approved') {
                 $employee = $fresh->employee;
-                abort_unless($employee?->is_active, 422, 'Karyawan sudah tidak aktif.');
+                abort_unless($employee?->aktif, 422, 'Karyawan sudah tidak aktif.');
 
-                if ($fresh->type === 'leave') {
-                    $usage = LeaveQuota::usage($employee, (int) $fresh->start_date->format('Y'));
-                    if ($usage['remaining'] < $fresh->total_days) {
+                if ($fresh->jenis === 'leave') {
+                    $usage = LeaveQuota::usage($employee, (int) $fresh->tanggal_mulai->format('Y'));
+                    if ($usage['remaining'] < $fresh->jumlah_hari) {
                         abort(422, 'Kuota cuti karyawan tidak mencukupi.');
                     }
-                    $overlap = LeaveRequest::where('employee_id', $employee->id)
-                        ->where('type', 'leave')
+                    $overlap = LeaveRequest::where('karyawan_id', $employee->id)
+                        ->where('jenis', 'leave')
                         ->where('status', 'approved')
                         ->where('id', '!=', $fresh->id)
-                        ->whereDate('start_date', '<=', $fresh->end_date->toDateString())
-                        ->whereDate('end_date', '>=', $fresh->start_date->toDateString())
+                        ->whereDate('tanggal_mulai', '<=', $fresh->tanggal_selesai->toDateString())
+                        ->whereDate('tanggal_selesai', '>=', $fresh->tanggal_mulai->toDateString())
                         ->exists();
                     if ($overlap) {
                         abort(422, 'Terdapat cuti yang sudah disetujui pada periode tersebut.');
@@ -156,21 +236,24 @@ class LeaveRequestController extends Controller
 
             $fresh->update([
                 'status' => $data['status'],
-                'review_note' => $data['review_note'] ?? null,
-                'rejection_reason' => $data['status'] === 'rejected' ? $data['rejection_reason'] : null,
-                'reviewed_by' => $request->user()->id,
-                'reviewed_at' => now(),
+                'catatan_ulasan' => $data['catatan_ulasan'] ?? null,
+                'alasan_penolakan' => $data['status'] === 'rejected' ? $data['alasan_penolakan'] : null,
+                'diulas_oleh' => $request->user()->id,
+                'diulas_pada' => now(),
             ]);
 
             if ($data['status'] === 'approved') {
-                foreach (CarbonPeriod::create($fresh->start_date, $fresh->end_date) as $date) {
+                foreach (CarbonPeriod::create($fresh->tanggal_mulai, $fresh->tanggal_selesai) as $date) {
                     Attendance::updateOrCreate(
-                        ['employee_id' => $fresh->employee_id, 'attendance_date' => $date->toDateString()],
-                        ['status' => $fresh->type === 'sick' ? 'sick' : ($fresh->type === 'leave' ? 'leave' : 'permission'), 'note' => $fresh->reason]
+                        ['karyawan_id' => $fresh->karyawan_id, 'tanggal' => $date->toDateString()],
+                        ['status' => $fresh->jenis === 'sick' ? 'sick' : ($fresh->jenis === 'leave' ? 'leave' : 'permission'), 'catatan' => $fresh->alasan]
                     );
                 }
             }
         });
+
+        $leaveRequest->refresh()->load('employee.user');
+        $leaveRequest->employee?->user?->notify(new LeaveRequestReviewed($leaveRequest));
 
         return back()->with('success', $data['status'] === 'approved' ? 'Pengajuan disetujui.' : 'Pengajuan ditolak.');
     }

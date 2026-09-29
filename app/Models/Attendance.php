@@ -7,17 +7,19 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Attendance extends Model
 {
-    protected $fillable = ['employee_id', 'attendance_date', 'check_in_at', 'check_out_at', 'late_minutes', 'work_minutes', 'status', 'note', 'checkout_status', 'checkout_approval_type', 'checkout_approved_at', 'checkout_approved_by', 'check_in_photo', 'check_in_latitude', 'check_in_longitude', 'check_in_accuracy', 'check_in_distance_meters', 'check_in_location_valid', 'check_out_photo', 'check_out_latitude', 'check_out_longitude', 'check_out_accuracy', 'check_out_distance_meters', 'check_out_location_valid'];
+    protected $table = 'kehadiran';
 
-    protected $casts = ['attendance_date' => 'date', 'check_in_at' => 'datetime', 'check_out_at' => 'datetime', 'checkout_approved_at' => 'datetime', 'check_in_location_valid' => 'boolean', 'check_out_location_valid' => 'boolean'];
+    protected $fillable = ['karyawan_id', 'tanggal', 'waktu_masuk', 'waktu_pulang', 'menit_telat', 'menit_kerja', 'status', 'catatan', 'status_pulang', 'tipe_persetujuan_pulang', 'disetujui_pada', 'disetujui_oleh', 'foto_masuk', 'lintang_masuk', 'bujur_masuk', 'akurasi_masuk', 'jarak_masuk_meter', 'lokasi_masuk_valid', 'foto_pulang', 'lintang_pulang', 'bujur_pulang', 'akurasi_pulang', 'jarak_pulang_meter', 'lokasi_pulang_valid'];
+
+    protected $casts = ['tanggal' => 'date', 'waktu_masuk' => 'datetime', 'waktu_pulang' => 'datetime', 'disetujui_pada' => 'datetime', 'lokasi_masuk_valid' => 'boolean', 'lokasi_pulang_valid' => 'boolean'];
 
     public function employee(): BelongsTo
     {
-        return $this->belongsTo(Employee::class);
+        return $this->belongsTo(Employee::class, 'karyawan_id');
     }
 
     public function approvedBy(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'checkout_approved_by');
+        return $this->belongsTo(User::class, 'disetujui_oleh');
     }
 }

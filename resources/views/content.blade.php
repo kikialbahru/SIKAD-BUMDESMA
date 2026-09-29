@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="{{ $page['title'] }} BUMDESMA LKD TARUB">
-    <title>{{ $page['title'] }} | BUMDESMA LKD TARUB</title>
+    <meta name="description" content="{{ $page['judul'] }} BUMDESMA LKD TARUB">
+    <title>{{ $page['judul'] }} | BUMDESMA LKD TARUB</title>
     <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
     <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('images/favicon-32x32.png') }}">
     <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('images/favicon-16x16.png') }}">
@@ -143,8 +143,8 @@
         <div class="hero-body">
             <div>
                 <p class="eyebrow">{{ $page['label'] }}</p>
-                <h1 class="hero-title">{{ $page['title'] }}</h1>
-                <p class="hero-sub">{{ $page['intro'] ?? $page['excerpt'] }}</p>
+                <h1 class="hero-title">{{ $page['judul'] }}</h1>
+                <p class="hero-sub">{{ $page['intro'] ?? $page['ringkasan'] }}</p>
                 <nav class="crumbs" aria-label="Navigasi halaman">
                     <a href="{{ url('/') }}">Beranda</a>
                     <span>/</span>
@@ -159,7 +159,7 @@
             </div>
             <div class="art">
                 <figure class="frame" style="margin:0">
-                    <img src="{{ $page['image_url'] }}" alt="{{ $page['title'] }}">
+                    <img src="{{ $page['gambar_url'] }}" alt="{{ $page['judul'] }}">
                     <figcaption>{{ $page['label'] }} — BUMDESMA LKD TARUB</figcaption>
                 </figure>
             </div>

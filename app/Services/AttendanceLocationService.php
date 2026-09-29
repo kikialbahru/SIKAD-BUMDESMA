@@ -33,7 +33,7 @@ class AttendanceLocationService
     {
         $location = AttendanceLocation::active();
         $distance = ($location && $latitude !== null && $longitude !== null)
-            ? (int) round(static::distanceMeters($latitude, $longitude, $location->latitude, $location->longitude))
+            ? (int) round(static::distanceMeters($latitude, $longitude, $location->lintang, $location->bujur))
             : null;
 
         if (! $location || ! $enforce) {
@@ -45,23 +45,23 @@ class AttendanceLocationService
             ];
         }
 
-        if ($accuracy !== null && $accuracy > $location->max_accuracy_meters) {
+        if ($accuracy !== null && $accuracy > $location->maks_akurasi_meter) {
             return [
                 'location' => $location,
                 'distance' => null,
                 'state' => 'poor_accuracy',
-                'message' => 'Lokasi belum cukup akurat (±'.(int) $accuracy.' m, batas ±'.$location->max_accuracy_meters.' m). Aktifkan GPS dan coba kembali.',
+                'message' => 'Lokasi belum cukup akurat (±'.(int) $accuracy.' m, batas ±'.$location->maks_akurasi_meter.' m). Aktifkan GPS dan coba kembali.',
             ];
         }
 
-        $distance = static::distanceMeters($latitude, $longitude, $location->latitude, $location->longitude);
+        $distance = static::distanceMeters($latitude, $longitude, $location->lintang, $location->bujur);
 
-        if ($distance > $location->radius_meters) {
+        if ($distance > $location->radius_meter) {
             return [
                 'location' => $location,
                 'distance' => (int) round($distance),
                 'state' => 'outside',
-                'message' => 'Anda berada di luar area absensi (±'.(int) round($distance).' m dari '.$location->name.', radius '.$location->radius_meters.' m). Silakan berada di lokasi yang telah ditentukan.',
+                'message' => 'Anda berada di luar area absensi (±'.(int) round($distance).' m dari '.$location->nama.', radius '.$location->radius_meter.' m). Silakan berada di lokasi yang telah ditentukan.',
             ];
         }
 
@@ -69,7 +69,7 @@ class AttendanceLocationService
             'location' => $location,
             'distance' => (int) round($distance),
             'state' => 'ok',
-            'message' => 'Lokasi sesuai (±'.(int) round($distance).' m dari '.$location->name.').',
+            'message' => 'Lokasi sesuai (±'.(int) round($distance).' m dari '.$location->nama.').',
         ];
     }
 }

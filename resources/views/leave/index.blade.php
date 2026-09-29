@@ -87,11 +87,11 @@
                     placeholder="Cari nama atau ID karyawan...">
             </div>
             <div class="col-6 col-md-2">
-                <label class="form-label small" for="type">Jenis</label>
-                <select class="form-select" id="type" name="type">
+                <label class="form-label small" for="jenis">Jenis</label>
+                <select class="form-select" id="jenis" name="jenis">
                     <option value="">Semua Jenis</option>
-                    <option value="leave" @selected(($filters['type'] ?? '') === 'leave')>Cuti</option>
-                    <option value="sick" @selected(($filters['type'] ?? '') === 'sick')>Sakit</option>
+                    <option value="leave" @selected(($filters['jenis'] ?? '') === 'leave')>Cuti</option>
+                    <option value="sick" @selected(($filters['jenis'] ?? '') === 'sick')>Sakit</option>
                 </select>
             </div>
             <div class="col-6 col-md-2">
@@ -155,9 +155,9 @@
                         <td>
                             <div class="d-flex align-items-center gap-2">
                                 <div class="employee-thumb">
-                                    @if($item->employee?->photo)
+                                    @if($item->employee?->foto)
                                         <img
-                                            src="{{ asset('storage/'.$item->employee->photo) }}"
+                                            src="{{ asset('storage/'.$item->employee->foto) }}"
                                             alt="Foto {{ $item->employee?->display_name }}">
                                     @else
                                         <span>
@@ -167,23 +167,23 @@
                                 </div>
                                 <div>
                                     <strong class="d-block">{{ $item->employee?->display_name ?? '-' }}</strong>
-                                    <small class="text-secondary">{{ $item->employee?->employee_code ?? '-' }}</small>
+                                    <small class="text-secondary">{{ $item->employee?->kode_karyawan ?? '-' }}</small>
                                 </div>
                             </div>
                         </td>
                         <td>
-                            @if($item->type === 'leave')
+                            @if($item->jenis === 'leave')
                                 <span class="badge text-bg-primary">Cuti</span>
-                            @elseif($item->type === 'permission')
+                            @elseif($item->jenis === 'permission')
                                 <span class="badge text-bg-warning">Izin</span>
                             @else
                                 <span class="badge text-bg-info">Sakit</span>
                             @endif
                         </td>
                         <td class="text-nowrap">
-                            {{ $item->start_date->format('d M Y') }} - {{ $item->end_date->format('d M Y') }}
+                            {{ $item->tanggal_mulai->format('d M Y') }} - {{ $item->tanggal_selesai->format('d M Y') }}
                         </td>
-                        <td>{{ $item->total_days }} Hari</td>
+                        <td>{{ $item->jumlah_hari }} Hari</td>
                         <td>
                             @if($item->status === 'approved')
                                 <span class="badge text-bg-success">Disetujui</span>
@@ -194,9 +194,23 @@
                             @endif
                         </td>
                         <td>
-                            <a class="btn btn-sm btn-outline-primary text-nowrap" href="{{ route('leave.show', $item) }}">
-                                <i class="bi bi-eye me-1">
-                                </i>Detail</a>
+                            <div class="d-flex flex-wrap gap-1">
+                                <a class="btn btn-sm btn-outline-primary text-nowrap" href="{{ route('leave.show', $item) }}">
+                                    <i class="bi bi-eye me-1">
+                                    </i>Detail</a>
+                                @if($item->status === 'pending' && !auth()->user()->isAdmin())
+                                    <form
+                                        method="POST"
+                                        action="{{ route('leave.destroy', $item) }}"
+                                        onsubmit="return confirm('Batalkan pengajuan ini? Data akan dihapus permanen.')">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button class="btn btn-sm btn-outline-danger text-nowrap" type="submit">
+                                            <i class="bi bi-trash me-1">
+                                            </i>Batalkan</button>
+                                    </form>
+                                @endif
+                            </div>
                         </td>
                     </tr>
                 @empty
@@ -224,18 +238,18 @@
                 </div>
                 <div class="modal-body">
                     <label class="form-label">Jenis pengajuan</label>
-                    <select class="form-select mb-3" name="type" required>
+                    <select class="form-select mb-3" name="jenis" required>
                         <option value="leave">Cuti</option>
                         <option value="sick">Sakit</option>
                     </select>
                     <div class="row g-3 mb-3">
                         <div class="col-6">
                             <label class="form-label">Mulai</label>
-                            <input class="form-control" type="date" name="start_date" required>
+                            <input class="form-control" type="date" name="tanggal_mulai" required>
                         </div>
                         <div class="col-6">
                             <label class="form-label">Selesai</label>
-                            <input class="form-control" type="date" name="end_date" required>
+                            <input class="form-control" type="date" name="tanggal_selesai" required>
                         </div>
                     </div>
                     <div
@@ -249,10 +263,10 @@
                         tanggal
                         mulai.</div>
                     <label class="form-label">Alasan</label>
-                    <textarea class="form-control mb-3" name="reason" rows="3" required>
+                    <textarea class="form-control mb-3" name="alasan" rows="3" required>
                     </textarea>
                     <label class="form-label">Dokumen pendukung</label>
-                    <input class="form-control" type="file" name="attachment">
+                    <input class="form-control" type="file" name="lampiran">
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-primary" type="submit">Kirim pengajuan</button>

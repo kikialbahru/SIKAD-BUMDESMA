@@ -13,11 +13,11 @@
             action="{{ route('payroll.generate') }}">
             @csrf
             <input class="form-control" name="period" type="month" value="{{ $period['value'] }}" required>
-            <select class="form-select" name="employee_id">
+            <select class="form-select" name="karyawan_id">
                 <option value="">Semua karyawan</option>
                 @foreach($employees as $employee)
                     <option value="{{ $employee->id }}" @selected($selectedEmployee == $employee->id)>
-                        {{ $employee->employee_code }}
+                        {{ $employee->kode_karyawan }}
                     </option>
                 @endforeach
             </select>
@@ -37,12 +37,12 @@
             </div>
             @if(auth()->user()->isAdmin())
                 <div class="col-6 col-lg-3">
-                    <label class="form-label small" for="employee_id">Karyawan</label>
-                    <select class="form-select" id="employee_id" name="employee_id">
+                    <label class="form-label small" for="karyawan_id">Karyawan</label>
+                    <select class="form-select" id="karyawan_id" name="karyawan_id">
                         <option value="">Semua karyawan</option>
                         @foreach($employees as $employee)
                             <option value="{{ $employee->id }}" @selected($selectedEmployee == $employee->id)>
-                                {{ $employee->employee_code }}
+                                {{ $employee->kode_karyawan }}
                             </option>
                         @endforeach
                     </select>
@@ -97,9 +97,7 @@
                     <th>Potongan</th>
                     <th>Gaji bersih</th>
                     <th>Status</th>
-                    @if(auth()->user()->isAdmin())
-                        <th>Aksi</th>
-                    @endif
+                    <th>Aksi</th>
                 </tr>
             </thead>
             <tbody>
@@ -108,36 +106,36 @@
                         <td>
                             <strong>{{ $payroll->employee?->user?->name ?? '-' }}</strong>
                             <small class="d-block text-secondary">
-                                {{ $payroll->employee?->employee_code }} · {{ $payroll->employee?->position?->name ?? 'Tanpa jabatan' }}
+                                {{ $payroll->employee?->kode_karyawan }} · {{ $payroll->employee?->position?->nama ?? 'Tanpa jabatan' }}
                             </small>
                         </td>
-                        <td class="text-nowrap">Rp {{ number_format($payroll->basic_salary, 0, ',', '.') }}
+                        <td class="text-nowrap">Rp {{ number_format($payroll->gaji_pokok, 0, ',', '.') }}
                             <small
                                 class="d-block text-secondary">+
                                 Rp
-                                {{ number_format($payroll->attendance_allowance, 0, ',', '.') }}
+                                {{ number_format($payroll->tunjangan_kehadiran, 0, ',', '.') }}
                                 tunjangan</small>
                         </td>
-                        <td class="text-success text-nowrap">+ Rp {{ number_format($payroll->reward_total, 0, ',', '.') }}
+                        <td class="text-success text-nowrap">+ Rp {{ number_format($payroll->total_reward, 0, ',', '.') }}
                         </td>
                         <td class="text-danger text-nowrap">
-                            - Rp {{ number_format($payroll->late_deduction + $payroll->absence_deduction + $payroll->punishment_total, 0, ',', '.') }}
+                            - Rp {{ number_format($payroll->potongan_telat + $payroll->potongan_absen + $payroll->total_hukuman, 0, ',', '.') }}
                             <small class="d-block text-secondary">
                                 @php($cuts = [])
-                                @if($payroll->late_deduction > 0)
+                                @if($payroll->potongan_telat > 0)
                                     @php($cuts[] = 'Terlambat')
                                 @endif
-                                @if($payroll->absence_deduction > 0)
+                                @if($payroll->potongan_absen > 0)
                                     @php($cuts[] = 'Alpa')
                                 @endif
-                                @if($payroll->punishment_total > 0)
+                                @if($payroll->total_hukuman > 0)
                                     @php($cuts[] = 'Punishment')
                                 @endif
                                 {{ $cuts ? implode(', ', $cuts) : 'Tanpa potongan' }}
                             </small>
                         </td>
                         <td>
-                            <strong class="fs-6 text-nowrap">Rp {{ number_format($payroll->net_salary, 0, ',', '.') }}
+                            <strong class="fs-6 text-nowrap">Rp {{ number_format($payroll->gaji_bersih, 0, ',', '.') }}
                             </strong>
                         </td>
                         <td>
@@ -149,12 +147,14 @@
                                 <span class="badge text-bg-warning">Draft</span>
                             @endif
                         </td>
-                        @if(auth()->user()->isAdmin())
-                            <td>
+                        <td class="text-nowrap">
+                            <a class="btn btn-sm btn-outline-primary" href="{{ route('payroll.show', $payroll) }}" title="Lihat slip">
+                                <i class="bi bi-receipt me-1"></i>Slip</a>
+                            @if(auth()->user()->isAdmin())
                                 <form
                                     method="POST"
                                     action="{{ route('payroll.status', $payroll) }}"
-                                    class="d-flex gap-1">
+                                    class="d-inline-flex gap-1 ms-1">
                                     @csrf
                                     @method('PATCH')
                                     <select class="form-select form-select-sm" name="status">
@@ -169,8 +169,8 @@
                                         </i>
                                     </button>
                                 </form>
-                            </td>
-                        @endif
+                            @endif
+                        </td>
                     </tr>
                 @empty
                     <tr>
@@ -193,7 +193,7 @@
                     <div>
                         <strong class="d-block">{{ $payroll->employee?->user?->name ?? '-' }}</strong>
                         <small class="text-secondary">
-                            {{ $payroll->employee?->employee_code }} · {{ $payroll->employee?->position?->name ?? 'Tanpa jabatan' }}
+                            {{ $payroll->employee?->kode_karyawan }} · {{ $payroll->employee?->position?->nama ?? 'Tanpa jabatan' }}
                         </small>
                     </div>
                     @if($payroll->status === 'paid')
@@ -206,28 +206,30 @@
                 </div>
                 <div class="bg-light rounded p-3 mb-3">
                     <small class="text-secondary">Gaji bersih</small>
-                    <strong class="d-block fs-5">Rp {{ number_format($payroll->net_salary, 0, ',', '.') }}</strong>
+                    <strong class="d-block fs-5">Rp {{ number_format($payroll->gaji_bersih, 0, ',', '.') }}</strong>
                 </div>
                 <div class="d-flex justify-content-between py-2 border-bottom">
                     <span class="text-secondary small">Gaji pokok</span>
-                    <strong class="small">Rp {{ number_format($payroll->basic_salary, 0, ',', '.') }}
+                    <strong class="small">Rp {{ number_format($payroll->gaji_pokok, 0, ',', '.') }}
                     </strong>
                 </div>
                 <div class="d-flex justify-content-between py-2 border-bottom">
                     <span class="text-secondary small">Tunjangan</span>
-                    <strong class="small">+ Rp {{ number_format($payroll->attendance_allowance, 0, ',', '.') }}
+                    <strong class="small">+ Rp {{ number_format($payroll->tunjangan_kehadiran, 0, ',', '.') }}
                     </strong>
                 </div>
                 <div class="d-flex justify-content-between py-2 border-bottom">
                     <span class="text-secondary small">Reward</span>
-                    <strong class="small text-success">+ Rp {{ number_format($payroll->reward_total, 0, ',', '.') }}
+                    <strong class="small text-success">+ Rp {{ number_format($payroll->total_reward, 0, ',', '.') }}
                     </strong>
                 </div>
                 <div class="d-flex justify-content-between py-2">
                     <span class="text-secondary small">Potongan</span>
-                    <strong class="small text-danger">- Rp {{ number_format($payroll->late_deduction + $payroll->absence_deduction + $payroll->punishment_total, 0, ',', '.') }}
+                    <strong class="small text-danger">- Rp {{ number_format($payroll->potongan_telat + $payroll->potongan_absen + $payroll->total_hukuman, 0, ',', '.') }}
                     </strong>
                 </div>
+                <a class="btn btn-outline-primary w-100 mt-3" href="{{ route('payroll.show', $payroll) }}">
+                    <i class="bi bi-receipt me-2"></i>Lihat Slip</a>
                 @if(auth()->user()->isAdmin())
                     <form method="POST" action="{{ route('payroll.status', $payroll) }}" class="d-flex gap-2 mt-3">
                         @csrf

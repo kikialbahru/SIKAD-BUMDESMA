@@ -20,10 +20,10 @@ class AttendanceLocationController extends Controller
     public function store(Request $request)
     {
         $data = $this->validated($request);
-        $data['is_active'] = true;
+        $data['aktif'] = true;
 
         DB::transaction(function () use ($data) {
-            AttendanceLocation::query()->update(['is_active' => false]);
+            AttendanceLocation::query()->update(['aktif' => false]);
             AttendanceLocation::create($data);
         });
 
@@ -40,11 +40,11 @@ class AttendanceLocationController extends Controller
     public function activate(AttendanceLocation $location)
     {
         DB::transaction(function () use ($location) {
-            AttendanceLocation::query()->update(['is_active' => false]);
-            $location->update(['is_active' => true]);
+            AttendanceLocation::query()->update(['aktif' => false]);
+            $location->update(['aktif' => true]);
         });
 
-        return back()->with('success', $location->name.' kini menjadi lokasi absensi aktif.');
+        return back()->with('success', $location->nama.' kini menjadi lokasi absensi aktif.');
     }
 
     public function destroy(AttendanceLocation $location)
@@ -53,11 +53,11 @@ class AttendanceLocationController extends Controller
             return back()->with('error', 'Tidak dapat menghapus satu-satunya lokasi absensi.');
         }
 
-        $wasActive = $location->is_active;
+        $wasActive = $location->aktif;
         $location->delete();
 
         if ($wasActive) {
-            AttendanceLocation::orderBy('id')->first()?->update(['is_active' => true]);
+            AttendanceLocation::orderBy('id')->first()?->update(['aktif' => true]);
         }
 
         return back()->with('success', 'Lokasi absensi berhasil dihapus.');
@@ -66,14 +66,14 @@ class AttendanceLocationController extends Controller
     private function validated(Request $request): array
     {
         return $request->validate([
-            'name' => ['required', 'string', 'max:100'],
-            'address' => ['nullable', 'string', 'max:255'],
-            'latitude' => ['required', 'numeric', 'between:-90,90'],
-            'longitude' => ['required', 'numeric', 'between:-180,180'],
-            'radius_meters' => ['required', 'integer', 'min:10', 'max:5000'],
-            'max_accuracy_meters' => ['required', 'integer', 'min:10', 'max:1000'],
-            'enforce_radius' => ['nullable', 'boolean'],
-            'enforce_checkout_radius' => ['nullable', 'boolean'],
-        ]) + ['enforce_radius' => $request->boolean('enforce_radius'), 'enforce_checkout_radius' => $request->boolean('enforce_checkout_radius')];
+            'nama' => ['required', 'string', 'max:100'],
+            'alamat' => ['nullable', 'string', 'max:255'],
+            'lintang' => ['required', 'numeric', 'between:-90,90'],
+            'bujur' => ['required', 'numeric', 'between:-180,180'],
+            'radius_meter' => ['required', 'integer', 'min:10', 'max:5000'],
+            'maks_akurasi_meter' => ['required', 'integer', 'min:10', 'max:1000'],
+            'wajib_radius' => ['nullable', 'boolean'],
+            'wajib_radius_pulang' => ['nullable', 'boolean'],
+        ]) + ['wajib_radius' => $request->boolean('wajib_radius'), 'wajib_radius_pulang' => $request->boolean('wajib_radius_pulang')];
     }
 }

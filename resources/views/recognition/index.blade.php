@@ -26,11 +26,11 @@
                 <div class="col-md-5">
                     <label class="form-label small">Filter karyawan</label>
                     <select class="form-select"
-                        name="employee_id">
+                        name="karyawan_id">
                         <option value="">Semua karyawan</option>
                         @foreach ($employees as $employee)
                             <option value="{{ $employee->id }}" @selected($selectedEmployee == $employee->id)>
-                                {{ $employee->employee_code }}
+                                {{ $employee->kode_karyawan }}
                                 - {{ $employee->user?->name }}</option>
                         @endforeach
                     </select>
@@ -49,9 +49,9 @@
                         <i class="bi bi-lightning me-2 text-warning">
                         </i>Poin keterlambatan otomatis</h2>
                     <p class="small text-secondary mb-0">
-                        @if ($pointSettings->auto_late_points_enabled)
-                            Aturan aktif: setiap {{ $pointSettings->late_points_block_minutes }} menit
-                            = {{ $pointSettings->late_points_per_block }} poin (bagian blok dihitung penuh).
+                        @if ($pointSettings->poin_otomatis_aktif)
+                            Aturan aktif: setiap {{ $pointSettings->blok_menit_poin }} menit
+                            = {{ $pointSettings->poin_per_blok }} poin (bagian blok dihitung penuh).
                         @else
                             Aturan sedang <strong>nonaktif</strong>.
                         @endif
@@ -90,19 +90,19 @@
                             <div class="d-flex justify-content-between gap-3">
                                 <div>
                                     <strong>
-                                        {{ $reward->title }}
+                                        {{ $reward->judul }}
                                     </strong>
                                     <small
                                         class="d-block text-secondary">{{ $reward->employee?->user?->name }} ·
-                                        {{ $reward->awarded_at->format('d M Y') }}</small>
-                                    @if ($reward->description)
-                                        <p class="small text-secondary mb-0 mt-2">{{ $reward->description }}</p>
+                                        {{ $reward->diberikan_pada->format('d M Y') }}</small>
+                                    @if ($reward->deskripsi)
+                                        <p class="small text-secondary mb-0 mt-2">{{ $reward->deskripsi }}</p>
                                     @endif
                                 </div>
                                 <div class="text-end">
                                     <span
                                         class="badge text-bg-success">
-                                        {{ $reward->type === 'points' ? $reward->points . ' poin' : 'Rp ' . number_format($reward->amount, 0, ',', '.') }}
+                                        {{ $reward->jenis === 'points' ? $reward->poin . ' poin' : 'Rp ' . number_format($reward->nominal, 0, ',', '.') }}
                                         </span>
                                     @if (auth()->user()->isAdmin())
                                         <form method="POST" action="{{ route('recognition.rewards.destroy', $reward) }}"
@@ -140,30 +140,30 @@
                             <div class="d-flex justify-content-between gap-3">
                                 <div>
                                     <strong>
-                                        {{ $punishment->title }}
+                                        {{ $punishment->judul }}
                                     </strong>
-                                    @if ($punishment->is_auto)
+                                    @if ($punishment->otomatis)
                                         <span
                                             class="badge text-bg-info ms-1"
                                             title="Digenerate otomatis dari keterlambatan">Otomatis</span>
                                     @endif
                                     <small
                                         class="d-block text-secondary">{{ $punishment->employee?->user?->name }} ·
-                                        {{ $punishment->issued_at->format('d M Y') }}</small>
-                                    @if ($punishment->description)
-                                        <p class="small text-secondary mb-0 mt-2">{{ $punishment->description }}</p>
+                                        {{ $punishment->dijatuhkan_pada->format('d M Y') }}</small>
+                                    @if ($punishment->deskripsi)
+                                        <p class="small text-secondary mb-0 mt-2">{{ $punishment->deskripsi }}</p>
                                     @endif
                                 </div>
                                 <div class="text-end">
                                     <span
                                         class="badge text-bg-danger">
-                                        {{ $punishment->type === 'salary_deduction' ? 'Rp ' . number_format($punishment->amount, 0, ',', '.') : ($punishment->type === 'points_deduction' && $punishment->points > 0 ? $punishment->points . ' poin' : ucfirst(str_replace('_', ' ', $punishment->type))) }}
+                                        {{ $punishment->jenis === 'salary_deduction' ? 'Rp ' . number_format($punishment->nominal, 0, ',', '.') : ($punishment->jenis === 'points_deduction' && $punishment->poin > 0 ? $punishment->poin . ' poin' : ucfirst(str_replace('_', ' ', $punishment->jenis))) }}
                                         </span>
                                     @if (auth()->user()->isAdmin())
                                         <form method="POST"
                                             action="{{ route('recognition.punishments.destroy', $punishment) }}"
                                             class="mt-2"
-                                            data-confirm="Hapus punishment {{ $punishment->title }}? Data yang dihapus tidak dapat dikembalikan.">
+                                            data-confirm="Hapus punishment {{ $punishment->judul }}? Data yang dihapus tidak dapat dikembalikan.">
                                             @csrf @method('DELETE')
                                             <button class="btn btn-sm btn-danger rounded-pill px-3"
                                                 type="submit">
@@ -196,32 +196,32 @@
                             </button>
                     </div>
                     <div class="modal-body">
-                        <select class="form-select mb-3" name="employee_id" required>
+                        <select class="form-select mb-3" name="karyawan_id" required>
                             <option value="">Pilih karyawan</option>
                             @foreach ($employees as $employee)
-                                <option value="{{ $employee->id }}">{{ $employee->employee_code }} -
+                                <option value="{{ $employee->id }}">{{ $employee->kode_karyawan }} -
                                     {{ $employee->user?->name }}</option>
                             @endforeach
                         </select>
-                        <input class="form-control mb-3" name="title" placeholder="Judul reward" required>
+                        <input class="form-control mb-3" name="judul" placeholder="Judul reward" required>
                         <select
-                            class="form-select mb-3" name="type">
+                            class="form-select mb-3" name="jenis">
                             <option value="bonus">Bonus nominal</option>
                             <option value="points">Poin reward</option>
                         </select>
                         <div class="row g-2 mb-3">
                             <div class="col-6">
-                                <input class="form-control" name="amount" type="number" min="0"
+                                <input class="form-control" name="nominal" type="number" min="0"
                                     placeholder="Nominal bonus">
                                     </div>
                             <div class="col-6">
-                                <input class="form-control" name="points" type="number" min="0"
+                                <input class="form-control" name="poin" type="number" min="0"
                                     placeholder="Poin">
                                     </div>
                         </div>
-                        <input class="form-control mb-3" name="awarded_at" type="date"
+                        <input class="form-control mb-3" name="diberikan_pada" type="date"
                             value="{{ today()->format('Y-m-d') }}" required>
-                        <textarea class="form-control" name="description" rows="3" placeholder="Keterangan">
+                        <textarea class="form-control" name="deskripsi" rows="3" placeholder="Keterangan">
                         </textarea>
                     </div>
                     <div class="modal-footer">
@@ -240,26 +240,26 @@
                             </button>
                     </div>
                     <div class="modal-body">
-                        <select class="form-select mb-3" name="employee_id" required>
+                        <select class="form-select mb-3" name="karyawan_id" required>
                             <option value="">Pilih karyawan</option>
                             @foreach ($employees as $employee)
-                                <option value="{{ $employee->id }}">{{ $employee->employee_code }} -
+                                <option value="{{ $employee->id }}">{{ $employee->kode_karyawan }} -
                                     {{ $employee->user?->name }}</option>
                             @endforeach
                         </select>
-                        <input class="form-control mb-3" name="title" placeholder="Judul punishment"
+                        <input class="form-control mb-3" name="judul" placeholder="Judul punishment"
                             required>
-                            <select class="form-select mb-3" name="type">
+                            <select class="form-select mb-3" name="jenis">
                             <option value="warning">Peringatan</option>
                             <option value="points_deduction">Pengurangan poin</option>
                             <option value="salary_deduction">Potongan gaji</option>
                             <option value="administrative">Catatan administratif</option>
                         </select>
-                        <input class="form-control mb-3" name="amount" type="number" min="0"
+                        <input class="form-control mb-3" name="nominal" type="number" min="0"
                             placeholder="Nominal potongan">
-                            <input class="form-control mb-3" name="issued_at"
+                            <input class="form-control mb-3" name="dijatuhkan_pada"
                             type="date" value="{{ today()->format('Y-m-d') }}" required>
-                        <textarea class="form-control" name="description" rows="3" placeholder="Keterangan">
+                        <textarea class="form-control" name="deskripsi" rows="3" placeholder="Keterangan">
                         </textarea>
                     </div>
                     <div class="modal-footer">

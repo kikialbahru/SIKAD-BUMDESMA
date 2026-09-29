@@ -10,12 +10,16 @@ use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\HolidayController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\LeaveRequestController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\PayrollController;
+use App\Http\Controllers\PositionController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RecognitionController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\SalaryComponentController;
 use App\Http\Controllers\VisitAttendanceController;
+use App\Http\Controllers\WorkScheduleController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -42,6 +46,8 @@ Route::middleware('guest')->group(function () {
 
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'destroy'])->name('logout');
+    Route::get('/notifications/{id}', [NotificationController::class, 'read'])->name('notifications.read');
+    Route::post('/notifications/read-all', [NotificationController::class, 'readAll'])->name('notifications.read-all');
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/attendance', [AttendanceController::class, 'index'])->name('attendance.index');
     Route::middleware('admin')->prefix('attendance/corrections')->name('attendance.corrections.')->group(function () {
@@ -67,13 +73,18 @@ Route::middleware('auth')->group(function () {
     Route::get('/leave-requests/{leaveRequest}', [LeaveRequestController::class, 'show'])->name('leave.show');
     Route::get('/leave-requests/{leaveRequest}/attachment', [LeaveRequestController::class, 'attachment'])->name('leave.attachment');
     Route::post('/leave-requests', [LeaveRequestController::class, 'store'])->name('leave.store');
+    Route::put('/leave-requests/{leaveRequest}', [LeaveRequestController::class, 'update'])->name('leave.update');
+    Route::delete('/leave-requests/{leaveRequest}', [LeaveRequestController::class, 'destroy'])->name('leave.destroy');
     Route::patch('/leave-requests/{leaveRequest}/review', [LeaveRequestController::class, 'review'])->middleware('admin')->name('leave.review');
     Route::get('/recognition', [RecognitionController::class, 'index'])->name('recognition.index');
     Route::get('/visits', [VisitAttendanceController::class, 'index'])->name('visits.index');
     Route::post('/visits', [VisitAttendanceController::class, 'store'])->name('visits.store');
     Route::get('/visits/{visit}', [VisitAttendanceController::class, 'show'])->whereNumber('visit')->name('visits.show');
+    Route::put('/visits/{visit}', [VisitAttendanceController::class, 'update'])->whereNumber('visit')->name('visits.update');
     Route::delete('/visits/{visit}', [VisitAttendanceController::class, 'destroy'])->name('visits.destroy');
     Route::get('/payroll', [PayrollController::class, 'index'])->name('payroll.index');
+    Route::get('/payroll/{payroll}', [PayrollController::class, 'show'])->whereNumber('payroll')->name('payroll.show');
+    Route::get('/payroll/{payroll}/pdf', [PayrollController::class, 'exportPdf'])->whereNumber('payroll')->name('payroll.pdf');
     Route::get('/profile', [ProfileController::class, 'index'])->name('profile');
     Route::get('/profile/edit', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
@@ -113,6 +124,18 @@ Route::middleware('auth')->group(function () {
         });
         Route::post('/payroll/generate', [PayrollController::class, 'generate'])->name('payroll.generate');
         Route::patch('/payroll/{payroll}/status', [PayrollController::class, 'updateStatus'])->name('payroll.status');
+        Route::get('/positions', [PositionController::class, 'index'])->name('positions.index');
+        Route::post('/positions', [PositionController::class, 'store'])->name('positions.store');
+        Route::put('/positions/{position}', [PositionController::class, 'update'])->name('positions.update');
+        Route::delete('/positions/{position}', [PositionController::class, 'destroy'])->name('positions.destroy');
+        Route::get('/work-schedules', [WorkScheduleController::class, 'index'])->name('work-schedules.index');
+        Route::post('/work-schedules', [WorkScheduleController::class, 'store'])->name('work-schedules.store');
+        Route::put('/work-schedules/{schedule}', [WorkScheduleController::class, 'update'])->name('work-schedules.update');
+        Route::delete('/work-schedules/{schedule}', [WorkScheduleController::class, 'destroy'])->name('work-schedules.destroy');
+        Route::get('/salary-components', [SalaryComponentController::class, 'index'])->name('salary-components.index');
+        Route::post('/salary-components', [SalaryComponentController::class, 'store'])->name('salary-components.store');
+        Route::put('/salary-components/{salaryComponent}', [SalaryComponentController::class, 'update'])->name('salary-components.update');
+        Route::delete('/salary-components/{salaryComponent}', [SalaryComponentController::class, 'destroy'])->name('salary-components.destroy');
     });
     Route::middleware('admin')->prefix('holidays')->name('holidays.')->group(function () {
         Route::get('/', [HolidayController::class, 'index'])->name('index');

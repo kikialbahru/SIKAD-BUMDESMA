@@ -7,12 +7,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Punishment extends Model
 {
-    protected $fillable = ['employee_id', 'punishment_rule_id', 'type', 'amount', 'points', 'is_auto', 'title', 'description', 'issued_at'];
+    protected $table = 'hukuman';
 
-    protected $casts = ['amount' => 'decimal:2', 'issued_at' => 'date', 'is_auto' => 'boolean'];
+    protected $fillable = ['karyawan_id', 'punishment_rule_id', 'jenis', 'nominal', 'poin', 'otomatis', 'judul', 'deskripsi', 'dijatuhkan_pada'];
+
+    protected $casts = ['nominal' => 'decimal:2', 'dijatuhkan_pada' => 'date', 'otomatis' => 'boolean'];
 
     public function employee(): BelongsTo
     {
-        return $this->belongsTo(Employee::class);
+        return $this->belongsTo(Employee::class, 'karyawan_id');
     }
 }

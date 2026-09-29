@@ -32,8 +32,8 @@
             <div class="card-body">
                 <div class="d-flex align-items-center gap-3 mb-4">
                     <div class="employee-avatar employee-preview-avatar" style="width:84px;height:84px;font-size:2rem">
-                        @if($employee->photo)
-                            <img src="{{ asset('storage/'.$employee->photo) }}" alt="Foto saat ini">
+                        @if($employee->foto)
+                            <img src="{{ asset('storage/'.$employee->foto) }}" alt="Foto saat ini">
                         @else
                             <span>
                                 {{ strtoupper(substr($employee->display_name !== '-' ? $employee->display_name : 'K', 0, 1)) }}
@@ -44,13 +44,13 @@
                         <label for="photo" class="btn btn-outline-primary btn-sm mb-2">
                             <i class="bi bi-camera me-1">
                             </i>Ganti Foto</label>
-                        <input class="d-none" id="photo" type="file" name="photo" accept=".jpg,.jpeg,.png,.webp">
-                        @if($employee->photo)
+                        <input class="d-none" id="photo" type="file" name="foto" accept=".jpg,.jpeg,.png,.webp">
+                        @if($employee->foto)
                             <button type="button" id="remove-photo-btn" class="btn btn-outline-danger btn-sm mb-2 ms-1">
                                 <i class="bi bi-trash me-1">
                                 </i>Hapus Foto</button>
                         @endif
-                        <input type="checkbox" name="remove_photo" value="1" id="remove_photo" class="d-none">
+                        <input type="checkbox" name="hapus_foto" value="1" id="remove_photo" class="d-none">
                         <div
                             class="form-text">JPG,
                             JPEG,
@@ -64,7 +64,7 @@
                             tampil
                             sebelum
                             disimpan.</div>
-                        @error('photo')
+                        @error('foto')
                             <div class="text-danger small">{{ $message }}</div>
                         @enderror
                     </div>
@@ -72,25 +72,25 @@
                 <div class="mb-3">
                     <label class="form-label" for="name">Nama Lengkap</label>
                     <input
-                        class="form-control @error('name') is-invalid @enderror"
+                        class="form-control @error('nama') is-invalid @enderror"
                         id="name"
                         name="name"
-                        value="{{ old('name', $employee->display_name !== '-' ? $employee->display_name : '') }}"
+                        value="{{ old('nama', $employee->display_name !== '-' ? $employee->display_name : '') }}"
                         required>
-                    @error('name')
+                    @error('nama')
                         <div class="invalid-feedback">{{ $message }}</div>
                     @enderror
                 </div>
                 <div class="mb-3">
                     <label class="form-label">ID Karyawan</label>
                     @if($employee->exists)
-                        <input type="hidden" name="employee_code" value="{{ $employee->employee_code }}">
+                        <input type="hidden" name="kode_karyawan" value="{{ $employee->kode_karyawan }}">
                         <div class="input-group">
                             <span class="input-group-text">
                                 <i class="bi bi-lock">
                                 </i>
                             </span>
-                            <input class="form-control bg-light" value="{{ $employee->employee_code }}" readonly>
+                            <input class="form-control bg-light" value="{{ $employee->kode_karyawan }}" readonly>
                         </div>
                         <div class="form-text">ID karyawan dibuat otomatis dan tidak dapat diubah.</div>
                     @else
@@ -101,24 +101,24 @@
                     <div class="col-md-6">
                         <label class="form-label" for="phone">Nomor Telepon</label>
                         <input
-                            class="form-control @error('phone') is-invalid @enderror"
+                            class="form-control @error('telepon') is-invalid @enderror"
                             id="phone"
-                            name="phone"
-                            value="{{ old('phone', $employee->phone) }}">
-                        @error('phone')
+                            name="telepon"
+                            value="{{ old('telepon', $employee->telepon) }}">
+                        @error('telepon')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>
                     <div class="col-md-6">
                         <label class="form-label" for="joined_at">Tanggal Bergabung</label>
                         <input
-                            class="form-control @error('joined_at') is-invalid @enderror"
+                            class="form-control @error('tanggal_masuk') is-invalid @enderror"
                             id="joined_at"
                             type="date"
-                            name="joined_at"
-                            value="{{ old('joined_at', $employee->joined_at?->format('Y-m-d')) }}"
+                            name="tanggal_masuk"
+                            value="{{ old('tanggal_masuk', $employee->tanggal_masuk?->format('Y-m-d')) }}"
                             required>
-                        @error('joined_at')
+                        @error('tanggal_masuk')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>
@@ -138,48 +138,48 @@
                 <div class="mb-3">
                     <label class="form-label" for="position_id">Jabatan</label>
                     <select
-                        class="form-select @error('position_id') is-invalid @enderror"
+                        class="form-select @error('jabatan_id') is-invalid @enderror"
                         id="position_id"
-                        name="position_id"
+                        name="jabatan_id"
                         required>
                         <option value="">Pilih jabatan</option>
                         @foreach($positions as $position)
                             <option
                                 value="{{ $position->id }}"
-                                @selected(old('position_id', $employee->position_id) == $position->id)>
-                            {{ $position->name }}
+                                @selected(old('jabatan_id', $employee->jabatan_id) == $position->id)>
+                            {{ $position->nama }}
                             </option>
                         @endforeach
                     </select>
-                    @error('position_id')
+                    @error('jabatan_id')
                         <div class="invalid-feedback">{{ $message }}</div>
                     @enderror
                 </div>
                 <div class="mb-3">
                     <label class="form-label" for="work_schedule_id">Jadwal Kerja</label>
                     <select
-                        class="form-select @error('work_schedule_id') is-invalid @enderror"
+                        class="form-select @error('jadwal_kerja_id') is-invalid @enderror"
                         id="work_schedule_id"
-                        name="work_schedule_id">
+                        name="jadwal_kerja_id">
                         <option value="">Pilih jadwal</option>
                         @foreach($schedules as $schedule)
                             <option
                                 value="{{ $schedule->id }}"
-                                @selected(old('work_schedule_id', $employee->work_schedule_id) == $schedule->id)>
-                            {{ $schedule->name }} ({{ substr($schedule->start_time, 0, 5) }} - {{ substr($schedule->end_time, 0, 5) }})
+                                @selected(old('jadwal_kerja_id', $employee->jadwal_kerja_id) == $schedule->id)>
+                            {{ $schedule->nama }} ({{ substr($schedule->jam_masuk, 0, 5) }} - {{ substr($schedule->jam_pulang, 0, 5) }})
                             </option>
                         @endforeach
                     </select>
-                    @error('work_schedule_id')
+                    @error('jadwal_kerja_id')
                         <div class="invalid-feedback">{{ $message }}</div>
                     @enderror
                 </div>
                 @if($employee->exists)
-                    @php($statusActive = (string) old('is_active', $employee->is_active ? '1' : '0') === '1')
+                    @php($statusActive = (string) old('aktif', $employee->aktif ? '1' : '0') === '1')
                     <div class="mb-0">
                         <label class="form-label" for="is_active">Status Karyawan</label>
                         <div class="d-flex align-items-center gap-2">
-                            <select class="form-select" id="is_active" name="is_active">
+                            <select class="form-select" id="is_active" name="aktif">
                                 <option value="1" @selected($statusActive)>Aktif</option>
                                 <option value="0" @selected(! $statusActive)>Nonaktif</option>
                             </select>
@@ -216,10 +216,10 @@
                     </div>
                     <input
                         type="hidden"
-                        name="basic_salary"
+                        name="gaji_pokok"
                         id="basic_salary"
-                        value="{{ old('basic_salary', $employee->basic_salary ?? 0) }}">
-                    @error('basic_salary')
+                        value="{{ old('gaji_pokok', $employee->gaji_pokok ?? 0) }}">
+                    @error('gaji_pokok')
                         <div class="text-danger small">{{ $message }}</div>
                     @enderror
                 </div>
@@ -236,10 +236,10 @@
                     </div>
                     <input
                         type="hidden"
-                        name="attendance_allowance"
+                        name="tunjangan_kehadiran"
                         id="attendance_allowance"
-                        value="{{ old('attendance_allowance', $employee->attendance_allowance ?? 0) }}">
-                    @error('attendance_allowance')
+                        value="{{ old('tunjangan_kehadiran', $employee->tunjangan_kehadiran ?? 0) }}">
+                    @error('tunjangan_kehadiran')
                         <div class="text-danger small">{{ $message }}</div>
                     @enderror
                 </div>

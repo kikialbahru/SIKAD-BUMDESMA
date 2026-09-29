@@ -21,7 +21,7 @@
         <div class="card border-0 shadow-sm text-center p-4 h-100">
             <div class="employee-avatar mx-auto mb-3" style="width:130px;height:130px;font-size:2.6rem">
                 @if($employee?->photo)
-                    <img src="{{ asset('storage/'.$employee->photo) }}" alt="Foto {{ $displayName }}">
+                    <img src="{{ asset('storage/'.$employee->foto) }}" alt="Foto {{ $displayName }}">
                 @else
                 <span>
                     {{ $initials }}
@@ -30,18 +30,24 @@
             </div>
             <h2 class="h5 mb-1">{{ $displayName }}</h2>
             <p class="text-secondary mb-3">
-                {{ $employee?->position?->name ?? ($user->isAdmin() ? 'Administrator' : 'Belum ada jabatan') }}
+                {{ $employee?->position?->nama ?? ($user->isAdmin() ? 'Administrator' : 'Belum ada jabatan') }}
             </p>
             <div class="d-flex justify-content-center gap-2">
                 @if($employee)
-                    <span class="badge text-bg-light border">{{ $employee->employee_code }}</span>
-                    <span class="badge text-bg-{{ $employee->is_active ? 'success' : 'secondary' }}">
-                        {{ $employee->is_active ? 'Aktif' : 'Nonaktif' }}
+                    <span class="badge text-bg-light border">{{ $employee->kode_karyawan }}</span>
+                    <span class="badge text-bg-{{ $employee->aktif ? 'success' : 'secondary' }}">
+                        {{ $employee->aktif ? 'Aktif' : 'Nonaktif' }}
                     </span>
                 @else
                     <span class="badge text-bg-primary">Administrator</span>
                 @endif
             </div>
+            @if($photoCooldown ?? null)
+                <p class="text-secondary small mt-3 mb-0">
+                    <i class="bi bi-clock-history me-1"></i>Foto profil dapat diganti lagi pada
+                    <strong>{{ $photoCooldown['available_at']->translatedFormat('d F Y') }}</strong>.
+                </p>
+            @endif
         </div>
     </div>
 
@@ -76,37 +82,37 @@
                         <div class="col-sm-6">
                             <small class="text-secondary d-block">ID Karyawan</small>
                             <strong>
-                                {{ $employee->employee_code }}
+                                {{ $employee->kode_karyawan }}
                             </strong>
                         </div>
                         <div class="col-sm-6">
                             <small class="text-secondary d-block">Jabatan</small>
                             <strong>
-                                {{ $employee->position?->name ?? '-' }}
+                                {{ $employee->position?->nama ?? '-' }}
                             </strong>
                         </div>
                         <div class="col-sm-6">
                             <small class="text-secondary d-block">Nomor Telepon</small>
                             <strong>
-                                {{ $employee->phone ?: '-' }}
+                                {{ $employee->telepon ?: '-' }}
                             </strong>
                         </div>
                         <div class="col-sm-6">
                             <small class="text-secondary d-block">Tanggal Bergabung</small>
                             <strong>
-                                {{ $employee->joined_at?->format('d F Y') ?? '-' }}
+                                {{ $employee->tanggal_masuk?->format('d F Y') ?? '-' }}
                             </strong>
                         </div>
                         <div class="col-sm-6">
                             <small class="text-secondary d-block">Jadwal Kerja</small>
                             <strong>
-                                {{ $employee->workSchedule?->name ?? '-' }}
+                                {{ $employee->workSchedule?->nama ?? '-' }}
                             </strong>
                         </div>
                         <div class="col-sm-6">
                             <small class="text-secondary d-block">Status</small>
-                            <span class="badge text-bg-{{ $employee->is_active ? 'success' : 'secondary' }}">
-                                {{ $employee->is_active ? 'Aktif' : 'Nonaktif' }}
+                            <span class="badge text-bg-{{ $employee->aktif ? 'success' : 'secondary' }}">
+                                {{ $employee->aktif ? 'Aktif' : 'Nonaktif' }}
                             </span>
                         </div>
                     @endif

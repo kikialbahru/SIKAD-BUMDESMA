@@ -26,28 +26,28 @@
             <div class="card-body">
                 <div class="row g-3">
                     <div class="col-sm-6">
-                        <label class="form-label" for="work_start_time">Jam Masuk</label>
+                        <label class="form-label" for="jam_masuk">Jam Masuk</label>
                         <input
-                            class="form-control @error('work_start_time') is-invalid @enderror"
-                            id="work_start_time"
+                            class="form-control @error('jam_masuk') is-invalid @enderror"
+                            id="jam_masuk"
                             type="time"
-                            name="work_start_time"
-                            value="{{ old('work_start_time', substr((string) $settings->work_start_time, 0, 5)) }}"
+                            name="jam_masuk"
+                            value="{{ old('jam_masuk', substr((string) $settings->jam_masuk, 0, 5)) }}"
                             required>
-                        @error('work_start_time')
+                        @error('jam_masuk')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>
                     <div class="col-sm-6">
-                        <label class="form-label" for="work_end_time">Jam Pulang</label>
+                        <label class="form-label" for="jam_pulang">Jam Pulang</label>
                         <input
-                            class="form-control @error('work_end_time') is-invalid @enderror"
-                            id="work_end_time"
+                            class="form-control @error('jam_pulang') is-invalid @enderror"
+                            id="jam_pulang"
                             type="time"
-                            name="work_end_time"
-                            value="{{ old('work_end_time', substr((string) $settings->work_end_time, 0, 5)) }}"
+                            name="jam_pulang"
+                            value="{{ old('jam_pulang', substr((string) $settings->jam_pulang, 0, 5)) }}"
                             required>
-                        @error('work_end_time')
+                        @error('jam_pulang')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>
@@ -74,17 +74,17 @@
                     </i>Keterlambatan</h2>
             </div>
             <div class="card-body">
-                <label class="form-label" for="late_tolerance_minutes">Batas Toleransi (menit)</label>
+                <label class="form-label" for="toleransi_telat_menit">Batas Toleransi (menit)</label>
                 <input
-                    class="form-control @error('late_tolerance_minutes') is-invalid @enderror"
-                    id="late_tolerance_minutes"
+                    class="form-control @error('toleransi_telat_menit') is-invalid @enderror"
+                    id="toleransi_telat_menit"
                     type="number"
-                    name="late_tolerance_minutes"
+                    name="toleransi_telat_menit"
                     min="0"
                     max="180"
-                    value="{{ old('late_tolerance_minutes', $settings->late_tolerance_minutes) }}"
+                    value="{{ old('toleransi_telat_menit', $settings->toleransi_telat_menit) }}"
                     required>
-                @error('late_tolerance_minutes')
+                @error('toleransi_telat_menit')
                     <div class="invalid-feedback">{{ $message }}</div>
                 @enderror
                 <div
@@ -112,28 +112,28 @@
             <div class="card-body">
                 <div class="row g-3">
                     <div class="col-sm-6">
-                        <label class="form-label" for="checkout_start_time">Mulai Absen Pulang</label>
+                        <label class="form-label" for="mulai_absen_pulang">Mulai Absen Pulang</label>
                         <input
-                            class="form-control @error('checkout_start_time') is-invalid @enderror"
-                            id="checkout_start_time"
+                            class="form-control @error('mulai_absen_pulang') is-invalid @enderror"
+                            id="mulai_absen_pulang"
                             type="time"
-                            name="checkout_start_time"
-                            value="{{ old('checkout_start_time', substr((string) $settings->checkout_start_time, 0, 5)) }}"
+                            name="mulai_absen_pulang"
+                            value="{{ old('mulai_absen_pulang', substr((string) $settings->mulai_absen_pulang, 0, 5)) }}"
                             required>
-                        @error('checkout_start_time')
+                        @error('mulai_absen_pulang')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>
                     <div class="col-sm-6">
-                        <label class="form-label" for="checkout_end_time">Akhir Absen Pulang</label>
+                        <label class="form-label" for="akhir_absen_pulang">Akhir Absen Pulang</label>
                         <input
-                            class="form-control @error('checkout_end_time') is-invalid @enderror"
-                            id="checkout_end_time"
+                            class="form-control @error('akhir_absen_pulang') is-invalid @enderror"
+                            id="akhir_absen_pulang"
                             type="time"
-                            name="checkout_end_time"
-                            value="{{ old('checkout_end_time', substr((string) $settings->checkout_end_time, 0, 5)) }}"
+                            name="akhir_absen_pulang"
+                            value="{{ old('akhir_absen_pulang', substr((string) $settings->akhir_absen_pulang, 0, 5)) }}"
                             required>
-                        @error('checkout_end_time')
+                        @error('akhir_absen_pulang')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>
@@ -153,40 +153,40 @@
                     <input
                         class="form-check-input"
                         type="checkbox"
-                        id="auto_late_points_enabled"
-                        name="auto_late_points_enabled"
+                        id="poin_otomatis_aktif"
+                        name="poin_otomatis_aktif"
                         value="1"
-                        @checked(old('auto_late_points_enabled', $settings->auto_late_points_enabled))>
-                    <label class="form-check-label" for="auto_late_points_enabled">Aktifkan generate poin otomatis</label>
+                        @checked(old('poin_otomatis_aktif', $settings->poin_otomatis_aktif))>
+                    <label class="form-check-label" for="poin_otomatis_aktif">Aktifkan generate poin otomatis</label>
                 </div>
                 <div class="row g-3">
                     <div class="col-sm-6">
-                        <label class="form-label" for="late_points_block_minutes">Setiap (menit)</label>
+                        <label class="form-label" for="blok_menit_poin">Setiap (menit)</label>
                         <input
-                            class="form-control @error('late_points_block_minutes') is-invalid @enderror"
-                            id="late_points_block_minutes"
+                            class="form-control @error('blok_menit_poin') is-invalid @enderror"
+                            id="blok_menit_poin"
                             type="number"
-                            name="late_points_block_minutes"
+                            name="blok_menit_poin"
                             min="1"
                             max="240"
-                            value="{{ old('late_points_block_minutes', $settings->late_points_block_minutes) }}"
+                            value="{{ old('blok_menit_poin', $settings->blok_menit_poin) }}"
                             required>
-                        @error('late_points_block_minutes')
+                        @error('blok_menit_poin')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>
                     <div class="col-sm-6">
-                        <label class="form-label" for="late_points_per_block">Poin per blok</label>
+                        <label class="form-label" for="poin_per_blok">Poin per blok</label>
                         <input
-                            class="form-control @error('late_points_per_block') is-invalid @enderror"
-                            id="late_points_per_block"
+                            class="form-control @error('poin_per_blok') is-invalid @enderror"
+                            id="poin_per_blok"
                             type="number"
-                            name="late_points_per_block"
+                            name="poin_per_blok"
                             min="0"
                             max="100"
-                            value="{{ old('late_points_per_block', $settings->late_points_per_block) }}"
+                            value="{{ old('poin_per_blok', $settings->poin_per_blok) }}"
                             required>
-                        @error('late_points_per_block')
+                        @error('poin_per_blok')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>

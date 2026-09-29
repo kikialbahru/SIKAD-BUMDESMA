@@ -12,7 +12,6 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        $this->call(ContentSeeder::class);
         $this->call(AttendanceSeeder::class);
         $this->call(AttendanceLocationSeeder::class);
         // Karyawan tetap (KRY-007 dst.) dibuat di semua environment termasuk production.

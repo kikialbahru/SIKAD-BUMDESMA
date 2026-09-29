@@ -20,9 +20,9 @@ class AttendanceController extends Controller
             'date_from' => ['nullable', 'date'],
             'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
             'status' => ['nullable', 'in:present,late,leave,permission,sick,absent'],
-            'checkout_status' => ['nullable', 'in:waiting,approved,rejected,checked_out'],
+            'status_pulang' => ['nullable', 'in:waiting,approved,rejected,checked_out'],
             'month' => ['nullable', 'date_format:Y-m'],
-            'employee_id' => ['nullable', 'integer', 'exists:employees,id'],
+            'karyawan_id' => ['nullable', 'integer', 'exists:karyawan,id'],
         ]);
         if (! empty($filters['month'])) {
             $filters['date_from'] = date('Y-m-01', strtotime($filters['month'].'-01'));
@@ -43,23 +43,23 @@ class AttendanceController extends Controller
             'nextLabel' => $monthLabel(date('Y-m', strtotime($monthValue.'-01 +1 month'))),
             'isCurrent' => $monthValue === now()->format('Y-m'),
         ];
-        $query = Attendance::with('employee.user', 'employee.position')->latest('attendance_date')->latest('check_in_at');
+        $query = Attendance::with('employee.user', 'employee.position')->latest('tanggal')->latest('waktu_masuk');
 
         if (! $request->user()->isAdmin()) {
-            $query->where('employee_id', $request->user()->employee?->id ?? 0);
+            $query->where('karyawan_id', $request->user()->employee?->id ?? 0);
         }
         if (! empty($filters['search'])) {
-            $query->whereHas('employee', fn ($employeeQuery) => $employeeQuery->where('employee_code', 'like', '%'.$filters['search'].'%')->orWhereHas('user', fn ($userQuery) => $userQuery->where('name', 'like', '%'.$filters['search'].'%')));
+            $query->whereHas('employee', fn ($employeeQuery) => $employeeQuery->where('kode_karyawan', 'like', '%'.$filters['search'].'%')->orWhereHas('user', fn ($userQuery) => $userQuery->where('name', 'like', '%'.$filters['search'].'%')));
         }
-        $query->when($filters['date_from'] ?? null, fn ($query, $date) => $query->whereDate('attendance_date', '>=', $date));
-        $query->when($filters['date_to'] ?? null, fn ($query, $date) => $query->whereDate('attendance_date', '<=', $date));
+        $query->when($filters['date_from'] ?? null, fn ($query, $date) => $query->whereDate('tanggal', '>=', $date));
+        $query->when($filters['date_to'] ?? null, fn ($query, $date) => $query->whereDate('tanggal', '<=', $date));
         $query->when($filters['status'] ?? null, fn ($query, $status) => $query->where('status', $status));
-        $query->when($filters['checkout_status'] ?? null, fn ($query, $status) => $query->where('checkout_status', $status));
-        $query->when($filters['employee_id'] ?? null, fn ($query, $employeeId) => $query->where('employee_id', $employeeId));
+        $query->when($filters['status_pulang'] ?? null, fn ($query, $status) => $query->where('status_pulang', $status));
+        $query->when($filters['karyawan_id'] ?? null, fn ($query, $employeeId) => $query->where('karyawan_id', $employeeId));
 
         return view('attendance.index', [
             'attendances' => $query->paginate(15),
-            'employees' => $request->user()->isAdmin() ? Employee::with('user')->where('is_active', true)->orderBy('employee_code')->get() : collect(),
+            'employees' => $request->user()->isAdmin() ? Employee::with('user')->where('aktif', true)->orderBy('kode_karyawan')->get() : collect(),
             'filters' => $filters,
             'monthNav' => $monthNav,
             'settings' => AttendanceSetting::current(),
@@ -70,7 +70,7 @@ class AttendanceController extends Controller
     {
         // Karyawan hanya boleh melihat absensinya sendiri; admin boleh semua.
         abort_unless(
-            $request->user()->isAdmin() || $attendance->employee_id === $request->user()->employee?->id,
+            $request->user()->isAdmin() || $attendance->karyawan_id === $request->user()->employee?->id,
             403,
             'Anda tidak berhak melihat absensi ini.'
         );
@@ -86,19 +86,19 @@ class AttendanceController extends Controller
     {
         abort_if($request->user()->isAdmin(), 403, 'Administrator tidak perlu melakukan absensi.');
         $employee = $request->user()->employee;
-        abort_unless($employee?->is_active, 403, 'Akun karyawan belum terhubung.');
+        abort_unless($employee?->aktif, 403, 'Akun karyawan belum terhubung.');
 
         $now = now();
-        $onLeave = LeaveRequest::where('employee_id', $employee->id)
+        $onLeave = LeaveRequest::where('karyawan_id', $employee->id)
             ->where('status', 'approved')
-            ->whereDate('start_date', '<=', $now->toDateString())
-            ->whereDate('end_date', '>=', $now->toDateString())
+            ->whereDate('tanggal_mulai', '<=', $now->toDateString())
+            ->whereDate('tanggal_selesai', '>=', $now->toDateString())
             ->exists();
         if ($onLeave) {
             return $this->attendanceFailed($request, 'Anda memiliki pengajuan cuti/izin yang disetujui pada hari ini.');
         }
-        $attendance = Attendance::firstOrCreate(['employee_id' => $employee->id, 'attendance_date' => $now->toDateString()]);
-        if ($attendance->check_in_at) {
+        $attendance = Attendance::firstOrCreate(['karyawan_id' => $employee->id, 'tanggal' => $now->toDateString()]);
+        if ($attendance->waktu_masuk) {
             return $this->attendanceFailed($request, 'Absensi masuk hari ini sudah tercatat.');
         }
 
@@ -112,15 +112,15 @@ class AttendanceController extends Controller
         $lateMinutes = max(0, $times['start']->diffInMinutes($now, false));
 
         $attendance->update([
-            'check_in_at' => $now,
-            'late_minutes' => $lateMinutes,
+            'waktu_masuk' => $now,
+            'menit_telat' => $lateMinutes,
             'status' => $lateMinutes > 0 ? 'late' : 'present',
-            'check_in_photo' => $evidence['photo'],
-            'check_in_latitude' => $evidence['latitude'],
-            'check_in_longitude' => $evidence['longitude'],
-            'check_in_accuracy' => $evidence['accuracy'],
-            'check_in_distance_meters' => $evidence['distance'],
-            'check_in_location_valid' => $evidence['valid'],
+            'foto_masuk' => $evidence['foto'],
+            'lintang_masuk' => $evidence['lintang'],
+            'bujur_masuk' => $evidence['bujur'],
+            'akurasi_masuk' => $evidence['akurasi'],
+            'jarak_masuk_meter' => $evidence['jarak'],
+            'lokasi_masuk_valid' => $evidence['valid'],
         ]);
 
         return $this->attendanceSuccess($request, $attendance->fresh(), 'masuk', 'Absensi masuk berhasil dicatat pada '.$now->format('H:i').' WIB.');
@@ -130,10 +130,10 @@ class AttendanceController extends Controller
     {
         abort_if($request->user()->isAdmin(), 403, 'Administrator tidak perlu melakukan absensi.');
         $employee = $request->user()->employee;
-        $attendance = $employee?->attendances()->whereDate('attendance_date', today())->first();
-        abort_unless($attendance?->check_in_at, 422, 'Lakukan absensi masuk terlebih dahulu.');
+        $attendance = $employee?->attendances()->whereDate('tanggal', today())->first();
+        abort_unless($attendance?->waktu_masuk, 422, 'Lakukan absensi masuk terlebih dahulu.');
 
-        if ($attendance->check_out_at) {
+        if ($attendance->waktu_pulang) {
             return $this->attendanceFailed($request, 'Absensi pulang hari ini sudah tercatat.');
         }
 
@@ -149,15 +149,15 @@ class AttendanceController extends Controller
 
         $now = now();
         $attendance->update([
-            'check_out_at' => $now,
-            'work_minutes' => $attendance->check_in_at->diffInMinutes($now),
-            'checkout_status' => 'checked_out',
-            'check_out_photo' => $evidence['photo'],
-            'check_out_latitude' => $evidence['latitude'],
-            'check_out_longitude' => $evidence['longitude'],
-            'check_out_accuracy' => $evidence['accuracy'],
-            'check_out_distance_meters' => $evidence['distance'],
-            'check_out_location_valid' => $evidence['valid'],
+            'waktu_pulang' => $now,
+            'menit_kerja' => $attendance->waktu_masuk->diffInMinutes($now),
+            'status_pulang' => 'checked_out',
+            'foto_pulang' => $evidence['foto'],
+            'lintang_pulang' => $evidence['lintang'],
+            'bujur_pulang' => $evidence['bujur'],
+            'akurasi_pulang' => $evidence['akurasi'],
+            'jarak_pulang_meter' => $evidence['jarak'],
+            'lokasi_pulang_valid' => $evidence['valid'],
         ]);
 
         return $this->attendanceSuccess($request, $attendance->fresh(), 'pulang', 'Absensi pulang berhasil dicatat pada '.$now->format('H:i').' WIB.');
@@ -170,37 +170,37 @@ class AttendanceController extends Controller
     private function validatedEvidence(Request $request): array
     {
         $data = $request->validate([
-            'photo' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
-            'latitude' => ['required', 'numeric', 'between:-90,90'],
-            'longitude' => ['required', 'numeric', 'between:-180,180'],
-            'accuracy' => ['nullable', 'numeric', 'min:0', 'max:100000'],
+            'foto' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            'lintang' => ['required', 'numeric', 'between:-90,90'],
+            'bujur' => ['required', 'numeric', 'between:-180,180'],
+            'akurasi' => ['nullable', 'numeric', 'min:0', 'max:100000'],
         ]);
 
-        $latitude = (float) $data['latitude'];
-        $longitude = (float) $data['longitude'];
-        $accuracy = isset($data['accuracy']) ? (float) $data['accuracy'] : null;
+        $latitude = (float) $data['lintang'];
+        $longitude = (float) $data['bujur'];
+        $accuracy = isset($data['akurasi']) ? (float) $data['akurasi'] : null;
 
         // Cek lokasi SEBELUM menyimpan foto agar tidak ada file yatim.
         // Absen pulang: catat-saja (boleh dari lapangan) kecuali admin mengaktifkan
         // penegakan radius pulang; absen masuk tetap wajib dalam radius kantor.
         $isCheckout = $request->route()->getName() === 'attendance.check-out';
         $office = AttendanceLocation::active();
-        $enforce = (bool) ($office && ($isCheckout ? $office->enforce_checkout_radius : $office->enforce_radius));
+        $enforce = (bool) ($office && ($isCheckout ? $office->wajib_radius_pulang : $office->wajib_radius));
         $check = AttendanceLocationService::check($latitude, $longitude, $accuracy, $enforce);
         if ($check['state'] === 'poor_accuracy' || $check['state'] === 'outside') {
             return ['ok' => false, 'message' => $check['message']];
         }
 
         $folder = ($request->route()->getName() === 'attendance.check-out' ? 'attendance/check-out/' : 'attendance/check-in/').now()->format('Y/m');
-        $photo = $request->file('photo')->store($folder, 'public');
+        $photo = $request->file('foto')->store($folder, 'public');
 
         return [
             'ok' => true,
-            'photo' => $photo,
-            'latitude' => $latitude,
-            'longitude' => $longitude,
-            'accuracy' => $accuracy !== null ? (int) round($accuracy) : null,
-            'distance' => $check['distance'],
+            'foto' => $photo,
+            'lintang' => $latitude,
+            'bujur' => $longitude,
+            'akurasi' => $accuracy !== null ? (int) round($accuracy) : null,
+            'jarak' => $check['distance'],
             'valid' => $check['state'] === 'ok' ? true : ($check['state'] === 'unchecked' ? null : false),
             'location' => $check['location'],
         ];
@@ -218,7 +218,7 @@ class AttendanceController extends Controller
     private function attendanceSuccess(Request $request, Attendance $attendance, string $type, string $message)
     {
         if ($request->wantsJson()) {
-            $at = $type === 'pulang' ? $attendance->check_out_at : $attendance->check_in_at;
+            $at = $type === 'pulang' ? $attendance->waktu_pulang : $attendance->waktu_masuk;
 
             return response()->json([
                 'ok' => true,
@@ -226,14 +226,14 @@ class AttendanceController extends Controller
                 'type' => $type,
                 'attendance_id' => $attendance->id,
                 'detail_url' => route('attendance.show', $attendance),
-                'date' => $attendance->attendance_date->translatedFormat('d F Y'),
+                'date' => $attendance->tanggal->translatedFormat('d F Y'),
                 'time' => $at?->format('H:i:s').' WIB',
                 'status' => $attendance->status,
-                'photo_url' => asset('storage/'.($type === 'pulang' ? $attendance->check_out_photo : $attendance->check_in_photo)),
-                'latitude' => $type === 'pulang' ? $attendance->check_out_latitude : $attendance->check_in_latitude,
-                'longitude' => $type === 'pulang' ? $attendance->check_out_longitude : $attendance->check_in_longitude,
-                'accuracy' => $type === 'pulang' ? $attendance->check_out_accuracy : $attendance->check_in_accuracy,
-                'distance' => $type === 'pulang' ? $attendance->check_out_distance_meters : $attendance->check_in_distance_meters,
+                'foto_url' => asset('storage/'.($type === 'pulang' ? $attendance->foto_pulang : $attendance->foto_masuk)),
+                'lintang' => $type === 'pulang' ? $attendance->lintang_pulang : $attendance->lintang_masuk,
+                'bujur' => $type === 'pulang' ? $attendance->bujur_pulang : $attendance->bujur_masuk,
+                'akurasi' => $type === 'pulang' ? $attendance->akurasi_pulang : $attendance->akurasi_masuk,
+                'jarak' => $type === 'pulang' ? $attendance->jarak_pulang_meter : $attendance->jarak_masuk_meter,
             ]);
         }
 
@@ -247,26 +247,26 @@ class AttendanceController extends Controller
             'type' => ['nullable', 'in:early,special'],
         ]);
 
-        if ($attendance->check_out_at) {
+        if ($attendance->waktu_pulang) {
             return back()->with('error', 'Karyawan sudah absen pulang, persetujuan tidak dapat diubah.');
         }
 
         if ($data['decision'] === 'approved') {
             $attendance->update([
-                'checkout_status' => 'approved',
-                'checkout_approval_type' => $data['type'] ?? 'early',
-                'checkout_approved_by' => $request->user()->id,
-                'checkout_approved_at' => now(),
+                'status_pulang' => 'approved',
+                'tipe_persetujuan_pulang' => $data['type'] ?? 'early',
+                'disetujui_oleh' => $request->user()->id,
+                'disetujui_pada' => now(),
             ]);
 
             return back()->with('success', 'Pulang lebih awal berhasil diizinkan untuk karyawan.');
         }
 
         $attendance->update([
-            'checkout_status' => 'rejected',
-            'checkout_approval_type' => null,
-            'checkout_approved_by' => null,
-            'checkout_approved_at' => null,
+            'status_pulang' => 'rejected',
+            'tipe_persetujuan_pulang' => null,
+            'disetujui_oleh' => null,
+            'disetujui_pada' => null,
         ]);
 
         return back()->with('success', 'Pengajuan pulang awal berhasil ditolak.');

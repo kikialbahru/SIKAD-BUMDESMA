@@ -45,9 +45,9 @@ class AttendanceCorrectionController extends Controller
 
         // Bukti foto/GPS asli tidak diubah; persetujuan pulang awal dihitung ulang
         // dari jam yang dikoreksi sehingga admin dapat menyetujui ulang bila perlu.
-        $attributes['checkout_approval_type'] = null;
-        $attributes['checkout_approved_by'] = null;
-        $attributes['checkout_approved_at'] = null;
+        $attributes['tipe_persetujuan_pulang'] = null;
+        $attributes['disetujui_oleh'] = null;
+        $attributes['disetujui_pada'] = null;
 
         $attendance->update($attributes);
 
@@ -60,58 +60,58 @@ class AttendanceCorrectionController extends Controller
      */
     private function attributes(array $data): array
     {
-        $employee = Employee::findOrFail($data['employee_id']);
-        $date = Carbon::parse($data['attendance_date'])->toDateString();
-        $checkInAt = ! empty($data['check_in']) ? Carbon::parse($date.' '.$data['check_in']) : null;
-        $checkOutAt = $checkInAt && ! empty($data['check_out']) ? Carbon::parse($date.' '.$data['check_out']) : null;
+        $employee = Employee::findOrFail($data['karyawan_id']);
+        $date = Carbon::parse($data['tanggal'])->toDateString();
+        $checkInAt = ! empty($data['jam_masuk']) ? Carbon::parse($date.' '.$data['jam_masuk']) : null;
+        $checkOutAt = $checkInAt && ! empty($data['jam_pulang']) ? Carbon::parse($date.' '.$data['jam_pulang']) : null;
 
         if ($checkInAt) {
             $times = CheckoutPolicy::workTimes($employee, $checkInAt);
             $lateMinutes = max(0, $times['start']->diffInMinutes($checkInAt, false));
 
             return [
-                'employee_id' => $employee->id,
-                'attendance_date' => $date,
-                'check_in_at' => $checkInAt,
-                'check_out_at' => $checkOutAt,
-                'late_minutes' => $lateMinutes,
-                'work_minutes' => $checkOutAt ? $checkInAt->diffInMinutes($checkOutAt) : 0,
+                'karyawan_id' => $employee->id,
+                'tanggal' => $date,
+                'waktu_masuk' => $checkInAt,
+                'waktu_pulang' => $checkOutAt,
+                'menit_telat' => $lateMinutes,
+                'menit_kerja' => $checkOutAt ? $checkInAt->diffInMinutes($checkOutAt) : 0,
                 'status' => $lateMinutes > 0 ? 'late' : 'present',
-                'checkout_status' => $checkOutAt ? 'checked_out' : 'waiting',
-                'note' => $data['note'] ?? null,
+                'status_pulang' => $checkOutAt ? 'checked_out' : 'waiting',
+                'catatan' => $data['catatan'] ?? null,
             ];
         }
 
         return [
-            'employee_id' => $employee->id,
-            'attendance_date' => $date,
-            'check_in_at' => null,
-            'check_out_at' => null,
-            'late_minutes' => 0,
-            'work_minutes' => 0,
+            'karyawan_id' => $employee->id,
+            'tanggal' => $date,
+            'waktu_masuk' => null,
+            'waktu_pulang' => null,
+            'menit_telat' => 0,
+            'menit_kerja' => 0,
             'status' => $data['status'],
-            'checkout_status' => 'waiting',
-            'note' => $data['note'] ?? null,
+            'status_pulang' => 'waiting',
+            'catatan' => $data['catatan'] ?? null,
         ];
     }
 
     private function validated(Request $request, ?Attendance $attendance = null): array
     {
         $data = $request->validate([
-            'employee_id' => ['required', 'integer', 'exists:employees,id'],
-            'attendance_date' => ['required', 'date', 'before_or_equal:today', Rule::unique('attendances', 'attendance_date')->where(fn ($query) => $query->where('employee_id', $request->input('employee_id')))->ignore($attendance?->id)],
-            'check_in' => ['nullable', 'date_format:H:i', 'required_with:check_out'],
-            'check_out' => ['nullable', 'date_format:H:i', 'after:check_in'],
+            'karyawan_id' => ['required', 'integer', 'exists:karyawan,id'],
+            'tanggal' => ['required', 'date', 'before_or_equal:today', Rule::unique('kehadiran', 'tanggal')->where(fn ($query) => $query->where('karyawan_id', $request->input('karyawan_id')))->ignore($attendance?->id)],
+            'jam_masuk' => ['nullable', 'date_format:H:i', 'required_with:jam_pulang'],
+            'jam_pulang' => ['nullable', 'date_format:H:i', 'after:jam_masuk'],
             'status' => ['required', 'in:present,late,leave,permission,sick,absent'],
-            'note' => ['nullable', 'string', 'max:500'],
+            'catatan' => ['nullable', 'string', 'max:500'],
         ], [
-            'attendance_date.unique' => 'Karyawan ini sudah memiliki data absensi pada tanggal tersebut — gunakan tombol koreksi (ikon pensil).',
-            'check_in.required_with' => 'Jam masuk wajib diisi bila jam pulang diisi.',
+            'tanggal.unique' => 'Karyawan ini sudah memiliki data absensi pada tanggal tersebut — gunakan tombol koreksi (ikon pensil).',
+            'jam_masuk.required_with' => 'Jam masuk wajib diisi bila jam pulang diisi.',
         ]);
 
-        if (empty($data['check_in']) && in_array($data['status'], ['present', 'late'], true)) {
+        if (empty($data['jam_masuk']) && in_array($data['status'], ['present', 'late'], true)) {
             throw ValidationException::withMessages([
-                'check_in' => 'Isi jam masuk, atau pilih status Cuti/Izin/Sakit/Alpa bila karyawan tidak hadir.',
+                'jam_masuk' => 'Isi jam masuk, atau pilih status Cuti/Izin/Sakit/Alpa bila karyawan tidak hadir.',
             ]);
         }
 
@@ -120,6 +120,6 @@ class AttendanceCorrectionController extends Controller
 
     private function employees()
     {
-        return Employee::with('user')->orderBy('is_active', 'desc')->orderBy('employee_code')->get();
+        return Employee::with('user')->orderBy('aktif', 'desc')->orderBy('kode_karyawan')->get();
     }
 }

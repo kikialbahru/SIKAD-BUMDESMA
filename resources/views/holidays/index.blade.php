@@ -57,11 +57,11 @@
                     <tr>
                         <td>
                             <strong>
-                                {{ $holiday->holiday_date->translatedFormat('d F Y') }}
+                                {{ $holiday->tanggal->translatedFormat('d F Y') }}
                             </strong>
                         </td>
-                        <td class="text-secondary">{{ $holiday->holiday_date->translatedFormat('l') }}</td>
-                        <td>{{ $holiday->name }}</td>
+                        <td class="text-secondary">{{ $holiday->tanggal->translatedFormat('l') }}</td>
+                        <td>{{ $holiday->nama }}</td>
                         <td class="text-end text-nowrap">
                             <button
                                 class="btn btn-sm btn-outline-primary"
@@ -72,7 +72,7 @@
                             <i class="bi bi-pencil">
                             </i>
                             </button>
-                            <form class="d-inline" method="POST" action="{{ route('holidays.destroy', $holiday) }}" data-confirm="Hapus libur {{ $holiday->name }} ({{ $holiday->holiday_date->format('d/m/Y') }})?">@csrf @method('DELETE')
+                            <form class="d-inline" method="POST" action="{{ route('holidays.destroy', $holiday) }}" data-confirm="Hapus libur {{ $holiday->nama }} ({{ $holiday->tanggal->format('d/m/Y') }})?">@csrf @method('DELETE')
                                 <button class="btn btn-sm btn-outline-danger" type="submit" title="Hapus">
                                     <i class="bi bi-trash">
                                     </i>
@@ -104,14 +104,14 @@
                     @csrf
                     <div class="mb-3">
                         <label class="form-label" for="hol_date">Tanggal</label>
-                        <input class="form-control @error('holiday_date') is-invalid @enderror" id="hol_date" type="date" name="holiday_date" value="{{ old('holiday_date') }}" required>@error('holiday_date')
+                        <input class="form-control @error('tanggal') is-invalid @enderror" id="hol_date" type="date" name="tanggal" value="{{ old('tanggal') }}" required>@error('tanggal')
                     <div class="invalid-feedback">
                         {{ $message }}
                     </div>
                     @enderror</div>
                     <div class="mb-3">
                         <label class="form-label" for="hol_name">Keterangan</label>
-                        <input class="form-control @error('name') is-invalid @enderror" id="hol_name" name="name" value="{{ old('name') }}" required maxlength="100" placeholder="cth. Hari Raya Idul Fitri">@error('name')
+                        <input class="form-control @error('nama') is-invalid @enderror" id="hol_name" name="nama" value="{{ old('nama') }}" required maxlength="100" placeholder="cth. Hari Raya Idul Fitri">@error('nama')
                     <div class="invalid-feedback">
                         {{ $message }}
                     </div>
@@ -140,13 +140,13 @@
                 <input
                     class="form-control"
                     type="date"
-                    name="holiday_date"
-                    value="{{ $holiday->holiday_date->format('Y-m-d') }}"
+                    name="tanggal"
+                    value="{{ $holiday->tanggal->format('Y-m-d') }}"
                     required>
             </div>
             <div class="mb-3">
                 <label class="form-label">Keterangan</label>
-                <input class="form-control" name="name" value="{{ $holiday->name }}" required maxlength="100">
+                <input class="form-control" name="nama" value="{{ $holiday->nama }}" required maxlength="100">
             </div>
         </div>
         <div class="modal-footer">

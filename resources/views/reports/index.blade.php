@@ -6,6 +6,9 @@
         <div>
             <h1 class="h3 mb-1">Laporan</h1>
             <p class="text-secondary mb-0">Rekapitulasi dan laporan Sistem Informasi BUMDESMA LKD TARUB</p>
+            <span class="badge text-bg-light border mt-2">
+                <i class="bi bi-calendar-range me-1"></i>Periode: {{ $filters['period_label'] ?? $filters['start']->translatedFormat('F Y') }}
+            </span>
         </div>
         <div class="d-flex gap-2">
             <a class="btn btn-outline-secondary" target="_blank"
@@ -25,7 +28,7 @@
                     </div>
     </div>
     <div class="row g-3 mb-4">
-        @foreach ([['bi-people', auth()->user()->isAdmin() ? 'Total Karyawan Aktif' : 'Karyawan', $employees->where('is_active', true)->count()], ['bi-calendar-check', 'Total Kehadiran', $attendances->whereIn('status', ['present', 'late'])->count()], ['bi-geo-alt', 'Total Kunjungan', $visits->count()], ['bi-calendar-heart', 'Pengajuan Cuti & Izin', $leaves->count()], ['bi-trophy', 'Reward & Punishment', $rewards->count() + $punishments->count()]] as [$icon, $label, $value])
+        @foreach ([['bi-people', auth()->user()->isAdmin() ? 'Total Karyawan Aktif' : 'Karyawan', $employees->where('aktif', true)->count()], ['bi-calendar-check', 'Total Kehadiran', $attendances->whereIn('status', ['present', 'late'])->count()], ['bi-geo-alt', 'Total Kunjungan', $visits->count()], ['bi-calendar-heart', 'Pengajuan Cuti & Izin', $leaves->count()], ['bi-trophy', 'Reward & Punishment', $rewards->count() + $punishments->count()]] as [$icon, $label, $value])
             <div class="col-6 col-xl-4">
                 <div class="card stat-card h-100">
                     <div class="card-body">
@@ -75,25 +78,35 @@
                 <div class="col-6 col-md-2">
                     <label class="form-label small">Karyawan</label>
                     <select class="form-select"
-                        name="employee_id">
+                        name="karyawan_id">
                         <option value="">Semua karyawan</option>
                         @foreach ($employees as $employee)
                             <option
                                 value="{{ $employee->id }}"
-                                @selected(($filters['employee_id'] ?? '') == $employee->id)>
-                            {{ $employee->employee_code }}
+                                @selected(($filters['karyawan_id'] ?? '') == $employee->id)>
+                            {{ $employee->kode_karyawan }}
                             </option>
                         @endforeach
                     </select>
                 </div>
                 @else
-                <input type="hidden" name="employee_id" value="{{ $filters['employee_id'] ?? '' }}">
+                <input type="hidden" name="karyawan_id" value="{{ $filters['karyawan_id'] ?? '' }}">
                 <div class="col-6 col-md-2">
                     <label class="form-label small">Karyawan</label>
                     <input class="form-control" value="Data saya" disabled>
                 </div>
                 @endif
                 <div class="col-6 col-md-2">
+                    <label class="form-label small">Periode</label>
+                    <select class="form-select"
+                        name="period" id="filter-period">
+                        <option value="weekly" @selected(($filters['period'] ?? 'monthly') === 'weekly')>Mingguan</option>
+                        <option value="monthly" @selected(($filters['period'] ?? 'monthly') === 'monthly')>Bulanan</option>
+                        <option value="yearly" @selected(($filters['period'] ?? 'monthly') === 'yearly')>Tahunan</option>
+                        <option value="custom" @selected(($filters['period'] ?? 'monthly') === 'custom')>Kustom</option>
+                    </select>
+                </div>
+                <div class="col-6 col-md-2" data-period-show="monthly">
                     <label class="form-label small">Bulan</label>
                     <select class="form-select"
                         name="month">
@@ -103,7 +116,7 @@
                         @endforeach
                     </select>
                 </div>
-                <div class="col-6 col-md-2">
+                <div class="col-6 col-md-2" data-period-show="monthly yearly">
                     <label class="form-label small">Tahun</label>
                     <select class="form-select"
                         name="year">
@@ -111,6 +124,22 @@
                             <option value="{{ $year }}" @selected($filters['year'] === $year)>{{ $year }}</option>
                         @endforeach
                     </select>
+                </div>
+                <div class="col-6 col-md-2" data-period-show="weekly">
+                    <label class="form-label small">Minggu</label>
+                    <input type="date" class="form-control" name="week"
+                        value="{{ $filters['week'] ?? now()->toDateString() }}"
+                        title="Pilih tanggal — diambil minggu (Senin–Minggu) yang memuatnya">
+                </div>
+                <div class="col-6 col-md-2" data-period-show="custom">
+                    <label class="form-label small">Dari tanggal</label>
+                    <input type="date" class="form-control" name="start_date"
+                        value="{{ $filters['start_date'] ?? $filters['start']->toDateString() }}">
+                </div>
+                <div class="col-6 col-md-2" data-period-show="custom">
+                    <label class="form-label small">Sampai tanggal</label>
+                    <input type="date" class="form-control" name="end_date"
+                        value="{{ $filters['end_date'] ?? $filters['end']->toDateString() }}">
                 </div>
                 <div class="col-6 col-md-2">
                     <label class="form-label small">Status</label>
@@ -171,9 +200,9 @@
                         @forelse($attendanceSummary as $index => $item)
                             <tr>
                                 <td>{{ $index + 1 }}</td>
-                                <td>{{ $item['employee']->employee_code }}</td>
+                                <td>{{ $item['employee']->kode_karyawan }}</td>
                                 <td>{{ $item['employee']->display_name }}</td>
-                                <td>{{ $item['employee']->position?->name ?? '-' }}</td>
+                                <td>{{ $item['employee']->position?->nama ?? '-' }}</td>
                                 <td>{{ $item['present'] }}</td>
                                 <td>{{ $item['late'] }}</td>
                                 <td>{{ $item['permission'] }}</td>
@@ -185,7 +214,7 @@
                                 </td>
                                 <td>
                                     <a class="btn btn-sm btn-outline-primary"
-                                        href="{{ request()->fullUrlWithQuery(['type' => 'attendance', 'employee_id' => $item['employee']->id]) }}"
+                                        href="{{ request()->fullUrlWithQuery(['type' => 'attendance', 'karyawan_id' => $item['employee']->id]) }}"
                                         title="Detail">
                                         <i class="bi bi-eye">
                                         </i>
@@ -224,12 +253,12 @@
                         @forelse($leaves as $index => $item)
                             <tr>
                                 <td>{{ $index + 1 }}</td>
-                                <td>{{ $item->employee?->employee_code }}</td>
+                                <td>{{ $item->employee?->kode_karyawan }}</td>
                                 <td>{{ $item->employee?->user?->name }}</td>
-                                <td>{{ ucfirst($item->type) }}</td>
-                                <td>{{ $item->start_date->format('d/m/Y') }}</td>
-                                <td>{{ $item->end_date->format('d/m/Y') }}</td>
-                                <td>{{ $item->total_days }} hari</td>
+                                <td>{{ ucfirst($item->jenis) }}</td>
+                                <td>{{ $item->tanggal_mulai->format('d/m/Y') }}</td>
+                                <td>{{ $item->tanggal_selesai->format('d/m/Y') }}</td>
+                                <td>{{ $item->jumlah_hari }} hari</td>
                                 <td>
                                     <span
                                         class="badge text-bg-{{ $item->status === 'approved' ? 'success' : ($item->status === 'rejected' ? 'danger' : 'warning') }}">
@@ -252,7 +281,7 @@
                 <div class="card border-0 shadow-sm p-3">
                     <small>Total Gaji Pokok</small>
                     <strong>Rp
-                        {{ number_format($payrolls->sum('basic_salary'), 0, ',', '.') }}
+                        {{ number_format($payrolls->sum('gaji_pokok'), 0, ',', '.') }}
                         </strong>
                         </div>
             </div>
@@ -304,16 +333,16 @@
                         @forelse($payrolls as $index => $item)
                             <tr>
                                 <td>{{ $index + 1 }}</td>
-                                <td>{{ $item->employee?->employee_code }}</td>
+                                <td>{{ $item->employee?->kode_karyawan }}</td>
                                 <td>{{ $item->employee?->user?->name }}</td>
-                                <td>{{ $item->period_start->format('m/Y') }}</td>
-                                <td>Rp {{ number_format($item->basic_salary, 0, ',', '.') }}</td>
-                                <td class="text-success">Rp {{ number_format($item->reward_total, 0, ',', '.') }}</td>
+                                <td>{{ $item->periode_mulai->format('m/Y') }}</td>
+                                <td>Rp {{ number_format($item->gaji_pokok, 0, ',', '.') }}</td>
+                                <td class="text-success">Rp {{ number_format($item->total_reward, 0, ',', '.') }}</td>
                                 <td class="text-danger">Rp
-                                    {{ number_format($item->late_deduction + $item->absence_deduction + $item->punishment_total, 0, ',', '.') }}
+                                    {{ number_format($item->potongan_telat + $item->potongan_absen + $item->total_hukuman, 0, ',', '.') }}
                                 </td>
                                 <td>
-                                    <strong>Rp {{ number_format($item->net_salary, 0, ',', '.') }}
+                                    <strong>Rp {{ number_format($item->gaji_bersih, 0, ',', '.') }}
                                     </strong>
                                 </td>
                                 <td>
@@ -357,9 +386,9 @@
                                 <td>
                                     <span class="badge text-bg-success">Reward</span>
                                 </td>
-                                <td>{{ $item->title }}</td>
-                                <td>Rp {{ number_format($item->amount, 0, ',', '.') }}</td>
-                                <td>{{ $item->awarded_at->format('d/m/Y') }}</td>
+                                <td>{{ $item->judul }}</td>
+                                <td>Rp {{ number_format($item->nominal, 0, ',', '.') }}</td>
+                                <td>{{ $item->diberikan_pada->format('d/m/Y') }}</td>
                             </tr>
                             @endforeach @foreach ($punishments as $index => $item)
                                 <tr>
@@ -368,11 +397,11 @@
                                     <td>
                                         <span class="badge text-bg-danger">Punishment</span>
                                     </td>
-                                    <td>{{ $item->title }}</td>
+                                    <td>{{ $item->judul }}</td>
                                     <td>
-                                        {{ $item->type === 'points_deduction' && $item->points > 0 ? $item->points . ' poin' : 'Rp ' . number_format($item->amount, 0, ',', '.') }}
+                                        {{ $item->jenis === 'points_deduction' && $item->poin > 0 ? $item->poin . ' poin' : 'Rp ' . number_format($item->nominal, 0, ',', '.') }}
                                     </td>
-                                    <td>{{ $item->issued_at->format('d/m/Y') }}</td>
+                                    <td>{{ $item->dijatuhkan_pada->format('d/m/Y') }}</td>
                                 </tr>
                                 @endforeach @if ($rewards->isEmpty() && $punishments->isEmpty())
                                     <tr>
@@ -409,8 +438,8 @@
                                 <td>{{ $index + 1 }}</td>
                                 <td>
                                     <div class="employee-thumb">
-                                        @if ($item->photo)
-                                            <img src="{{ asset('storage/' . $item->photo) }}"
+                                        @if ($item->foto)
+                                            <img src="{{ asset('storage/' . $item->foto) }}"
                                             alt="Foto {{ $item->display_name }}">
                                             @else
                                             <span>
@@ -419,14 +448,14 @@
                                         @endif
                                     </div>
                                 </td>
-                                <td>{{ $item->employee_code }}</td>
+                                <td>{{ $item->kode_karyawan }}</td>
                                 <td>{{ $item->display_name }}</td>
-                                <td>{{ $item->position?->name ?? '-' }}</td>
-                                <td>{{ $item->joined_at?->format('d/m/Y') ?? '-' }}</td>
+                                <td>{{ $item->position?->nama ?? '-' }}</td>
+                                <td>{{ $item->tanggal_masuk?->format('d/m/Y') ?? '-' }}</td>
                                 <td>
                                     <span
-                                        class="badge text-bg-{{ $item->is_active ? 'success' : 'secondary' }}">
-                                        {{ $item->is_active ? 'Aktif' : 'Nonaktif' }}
+                                        class="badge text-bg-{{ $item->aktif ? 'success' : 'secondary' }}">
+                                        {{ $item->aktif ? 'Aktif' : 'Nonaktif' }}
                                         </span>
                                 </td>
                         </tr>@empty<tr>
@@ -461,14 +490,14 @@
                         @forelse($visits as $index => $item)
                             <tr>
                                 <td>{{ $index + 1 }}</td>
-                                <td>{{ $item->employee?->employee_code }}</td>
+                                <td>{{ $item->employee?->kode_karyawan }}</td>
                                 <td>{{ $item->employee?->user?->name }}</td>
-                                <td>{{ $item->title }}</td>
-                                <td>{{ $item->description ? \Illuminate\Support\Str::limit($item->description, 60) : '-' }}</td>
-                                <td>{{ $item->visit_date->format('d/m/Y') }}</td>
+                                <td>{{ $item->judul }}</td>
+                                <td>{{ $item->deskripsi ? \Illuminate\Support\Str::limit($item->deskripsi, 60) : '-' }}</td>
+                                <td>{{ $item->tanggal->format('d/m/Y') }}</td>
                                 <td>
-                                    @if(!empty($filters['employee_id']) && $item->latitude && $item->longitude)
-                                        {{ number_format($item->latitude, 5) }}, {{ number_format($item->longitude, 5) }}
+                                    @if(!empty($filters['karyawan_id']) && $item->lintang && $item->bujur)
+                                        {{ number_format($item->lintang, 5) }}, {{ number_format($item->bujur, 5) }}
                                     @else
                                         <span class="text-secondary">-</span>
                                     @endif
@@ -484,3 +513,24 @@
         </div>
     @endif
 @endsection
+
+@push('scripts')
+<script>
+    (function () {
+        var period = document.getElementById('filter-period');
+        if (!period) return;
+        var fields = document.querySelectorAll('[data-period-show]');
+        function toggle() {
+            fields.forEach(function (el) {
+                var show = el.getAttribute('data-period-show').split(' ').includes(period.value);
+                el.style.display = show ? '' : 'none';
+                el.querySelectorAll('select, input').forEach(function (input) {
+                    input.disabled = !show;
+                });
+            });
+        }
+        period.addEventListener('change', toggle);
+        toggle();
+    })();
+</script>
+@endpush

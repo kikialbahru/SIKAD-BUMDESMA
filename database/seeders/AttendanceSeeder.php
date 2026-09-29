@@ -12,12 +12,12 @@ class AttendanceSeeder extends Seeder
 {
     public function run(): void
     {
-        $position = Position::updateOrCreate(['name' => 'Staff'], ['description' => 'Staff BUMDESMA LKD TARUB']);
-        $schedule = WorkSchedule::firstOrCreate(['name' => 'Jam Kerja Reguler'], [
-            'start_time' => '08:00',
-            'end_time' => '15:00',
-            'late_tolerance_minutes' => 15,
-            'working_days' => ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
+        $position = Position::updateOrCreate(['nama' => 'Staff'], ['deskripsi' => 'Staff BUMDESMA LKD TARUB']);
+        $schedule = WorkSchedule::firstOrCreate(['nama' => 'Jam Kerja Reguler'], [
+            'jam_masuk' => '08:00',
+            'jam_pulang' => '15:00',
+            'toleransi_telat_menit' => 15,
+            'hari_kerja' => ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
         ]);
 
         // Akun demo (password "password") hanya dibuat di luar production.

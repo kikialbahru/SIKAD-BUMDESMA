@@ -7,17 +7,19 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class LeaveRequest extends Model
 {
-    protected $fillable = ['employee_id', 'type', 'start_date', 'end_date', 'total_days', 'reason', 'attachment_path', 'status', 'reviewed_by', 'reviewed_at', 'review_note', 'rejection_reason'];
+    protected $table = 'pengajuan_cuti';
 
-    protected $casts = ['start_date' => 'date', 'end_date' => 'date', 'reviewed_at' => 'datetime'];
+    protected $fillable = ['karyawan_id', 'jenis', 'tanggal_mulai', 'tanggal_selesai', 'jumlah_hari', 'alasan', 'jalur_lampiran', 'status', 'diulas_oleh', 'diulas_pada', 'catatan_ulasan', 'alasan_penolakan'];
+
+    protected $casts = ['tanggal_mulai' => 'date', 'tanggal_selesai' => 'date', 'diulas_pada' => 'datetime'];
 
     public function employee(): BelongsTo
     {
-        return $this->belongsTo(Employee::class);
+        return $this->belongsTo(Employee::class, 'karyawan_id');
     }
 
     public function reviewer(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'reviewed_by');
+        return $this->belongsTo(User::class, 'diulas_oleh');
     }
 }

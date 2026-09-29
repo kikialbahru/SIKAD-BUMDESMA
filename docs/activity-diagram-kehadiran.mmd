@@ -1,0 +1,38 @@
+flowchart TD
+  TTL["2. Activity Diagram Mengelola Kehadiran"]
+  style TTL fill:#bcd9f5,stroke:#000,stroke-width:1px
+  TTL --> S
+  subgraph KARYAWAN["Karyawan"]
+    direction TB
+    S(( )) --> K1["Ambil selfie dan titik GPS"]:::act --> K2["Kirim Absen Masuk"]:::act
+    K3["Kirim Absen Pulang"]:::act
+  end
+  subgraph ADMIN["Admin"]
+    direction TB
+    A1["Menyetujui pulang awal"]:::act
+    A2["Menolak pulang awal"]:::act
+  end
+  subgraph SISTEM["Sistem"]
+    direction TB
+    V1{"Bukti dan radius masuk valid?"} -->|"Tidak"| T["Tolak dan tampilkan pesan"]:::act --> E(( ))
+    V1 -->|"Ya"| W["Tentukan jam kerja lalu tandai Hadir atau Terlambat"]:::act --> E
+    V2{"Foto dan GPS pulang lengkap?"} -->|"Tidak"| T
+    V2 -->|"Ya"| C{"Waktu dibanding jendela pulang"}
+    C -->|"Dalam jendela"| P["Simpan waktu pulang"]:::act --> E
+    C -->|"Terlalu awal"| M["Catat Menunggu Persetujuan"]:::act --> E
+    C -->|"Jendela berakhir"| T
+    T2["Tetap tercatat belum pulang"]:::act --> E
+  end
+  K2 --> V1
+  K3 --> V2
+  A1 --> P
+  A2 --> T2
+  classDef act fill:#fff,stroke:#000;
+  style S fill:#000,stroke:#000
+  style E fill:#000,stroke:#f00,stroke-width:4px
+  style KARYAWAN fill:#fff,stroke:#000
+  style ADMIN fill:#fff,stroke:#000
+  style SISTEM fill:#fff,stroke:#000
+  style V1 fill:#d6eaf8,stroke:#000
+  style V2 fill:#d6eaf8,stroke:#000
+  style C fill:#d6eaf8,stroke:#000

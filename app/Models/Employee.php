@@ -11,15 +11,17 @@ class Employee extends Model
 {
     use SoftDeletes;
 
-    protected $fillable = ['user_id', 'position_id', 'work_schedule_id', 'employee_code', 'name', 'phone', 'email', 'photo', 'photo_updated_at', 'joined_at', 'basic_salary', 'attendance_allowance', 'is_active'];
+    protected $table = 'karyawan';
 
-    protected $casts = ['joined_at' => 'date', 'photo_updated_at' => 'datetime', 'basic_salary' => 'decimal:2', 'attendance_allowance' => 'decimal:2', 'is_active' => 'boolean'];
+    protected $fillable = ['pengguna_id', 'jabatan_id', 'jadwal_kerja_id', 'kode_karyawan', 'nama', 'telepon', 'email', 'foto', 'foto_diubah_pada', 'tanggal_masuk', 'gaji_pokok', 'tunjangan_kehadiran', 'aktif'];
+
+    protected $casts = ['tanggal_masuk' => 'date', 'foto_diubah_pada' => 'datetime', 'gaji_pokok' => 'decimal:2', 'tunjangan_kehadiran' => 'decimal:2', 'aktif' => 'boolean'];
 
     protected $appends = ['display_name', 'display_email'];
 
     public function getDisplayNameAttribute(): string
     {
-        return $this->name ?: ($this->user?->name ?? '-');
+        return $this->nama ?: ($this->user?->name ?? '-');
     }
 
     public function getDisplayEmailAttribute(): ?string
@@ -29,51 +31,51 @@ class Employee extends Model
 
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class, 'pengguna_id');
     }
 
     public function position(): BelongsTo
     {
-        return $this->belongsTo(Position::class);
+        return $this->belongsTo(Position::class, 'jabatan_id');
     }
 
     public function workSchedule(): BelongsTo
     {
-        return $this->belongsTo(WorkSchedule::class);
+        return $this->belongsTo(WorkSchedule::class, 'jadwal_kerja_id');
     }
 
     public function attendances(): HasMany
     {
-        return $this->hasMany(Attendance::class);
+        return $this->hasMany(Attendance::class, 'karyawan_id');
     }
 
     public function visitAttendances(): HasMany
     {
-        return $this->hasMany(VisitAttendance::class);
+        return $this->hasMany(VisitAttendance::class, 'karyawan_id');
     }
 
     public function leaveRequests(): HasMany
     {
-        return $this->hasMany(LeaveRequest::class);
+        return $this->hasMany(LeaveRequest::class, 'karyawan_id');
     }
 
     public function rewards(): HasMany
     {
-        return $this->hasMany(Reward::class);
+        return $this->hasMany(Reward::class, 'karyawan_id');
     }
 
     public function punishments(): HasMany
     {
-        return $this->hasMany(Punishment::class);
+        return $this->hasMany(Punishment::class, 'karyawan_id');
     }
 
     public function salaryComponents(): HasMany
     {
-        return $this->hasMany(SalaryComponent::class);
+        return $this->hasMany(SalaryComponent::class, 'karyawan_id');
     }
 
     public function payrolls(): HasMany
     {
-        return $this->hasMany(Payroll::class);
+        return $this->hasMany(Payroll::class, 'karyawan_id');
     }
 }

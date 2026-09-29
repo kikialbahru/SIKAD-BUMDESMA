@@ -22,8 +22,8 @@
                 class="employee-avatar mx-auto mb-3"
                 id="photo-preview"
                 style="width:130px;height:130px;font-size:2.6rem">
-                @if($employee->photo)
-                    <img src="{{ asset('storage/'.$employee->photo) }}" alt="Foto saat ini">
+                @if($employee->foto)
+                    <img src="{{ asset('storage/'.$employee->foto) }}" alt="Foto saat ini">
                 @else
                 <span>
                     {{ $initials }}
@@ -32,22 +32,15 @@
             </div>
             <h2 class="h6 mb-3">Foto Profil</h2>
             @if($photoCooldown ?? null)
-                <div
-                    class="alert alert-info small text-start">Foto
-                    profil
-                    hanya
-                    dapat
-                    diganti
-                    1
-                    minggu
-                    sekali.
-                    Dapat
-                    diganti
-                    lagi
-                    pada
-                    <strong>
-                {{ $photoCooldown['available_at']->translatedFormat('d F Y') }}
-                </strong> ({{ $photoCooldown['days_left'] }} hari lagi).</div>
+                <div class="alert alert-info small text-start mb-0">
+                    <i class="bi bi-clock-history me-1"></i>
+                    Foto profil hanya dapat diganti 1 minggu sekali.
+                    Dapat diganti lagi pada
+                    <strong>{{ $photoCooldown['available_at']->translatedFormat('d F Y') }}</strong>
+                    (<span
+                        id="photo-cooldown-countdown"
+                        data-available-at="{{ $photoCooldown['available_at']->toIso8601String() }}">{{ $photoCooldown['days_left'] }} hari lagi</span>).
+                </div>
             @else
                 <form method="POST" action="{{ route('profile.photo') }}" enctype="multipart/form-data">
                     @csrf
@@ -55,7 +48,7 @@
                         class="form-control text-start mb-2"
                         id="profile-photo"
                         type="file"
-                        name="photo"
+                        name="foto"
                         accept=".jpg,.jpeg,.png,.webp"
                         required>
                     <div
@@ -75,13 +68,13 @@
                         </i>Simpan Foto</button>
                 </form>
             @endif
-            @if($employee->photo && ! ($photoCooldown ?? null))
+            @if($employee->foto && ! ($photoCooldown ?? null))
                 <form
                     method="POST"
                     action="{{ route('profile.photo') }}"
                     data-confirm="Foto profil akan dihapus. Lanjutkan?">
                     @csrf
-                    <input type="hidden" name="remove_photo" value="1">
+                    <input type="hidden" name="hapus_foto" value="1">
                     <button class="btn btn-link text-danger text-decoration-none btn-sm mt-2" type="submit">
                         <i class="bi bi-trash me-1">
                         </i>Hapus foto</button>
@@ -102,25 +95,25 @@
                     <div class="col-sm-6">
                         <small class="text-secondary d-block">ID Karyawan</small>
                         <strong>
-                            {{ $employee->employee_code }}
+                            {{ $employee->kode_karyawan }}
                         </strong>
                     </div>
                     <div class="col-sm-6">
                         <small class="text-secondary d-block">Jabatan</small>
                         <strong>
-                            {{ $employee->position?->name ?? '-' }}
+                            {{ $employee->position?->nama ?? '-' }}
                         </strong>
                     </div>
                     <div class="col-sm-6">
                         <small class="text-secondary d-block">Tanggal Bergabung</small>
                         <strong>
-                            {{ $employee->joined_at?->format('d F Y') ?? '-' }}
+                            {{ $employee->tanggal_masuk?->format('d F Y') ?? '-' }}
                         </strong>
                     </div>
                     <div class="col-sm-6">
                         <small class="text-secondary d-block">Status</small>
-                        <span class="badge text-bg-{{ $employee->is_active ? 'success' : 'secondary' }}">
-                            {{ $employee->is_active ? 'Aktif' : 'Nonaktif' }}
+                        <span class="badge text-bg-{{ $employee->aktif ? 'success' : 'secondary' }}">
+                            {{ $employee->aktif ? 'Aktif' : 'Nonaktif' }}
                         </span>
                     </div>
                 </div>
@@ -130,7 +123,7 @@
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label">Nama Lengkap</label>
-                            <input class="form-control @error('name') is-invalid @enderror" name="name" value="{{ old('name', $user->name) }}" required>@error('name')
+                            <input class="form-control @error('nama') is-invalid @enderror" name="nama" value="{{ old('nama', $user->name) }}" required>@error('nama')
                         <div class="invalid-feedback">
                             {{ $message }}
                         </div>
@@ -145,7 +138,7 @@
                         @if($employee)
                         <div class="col-md-6">
                             <label class="form-label">Nomor Telepon</label>
-                            <input class="form-control @error('phone') is-invalid @enderror" name="phone" value="{{ old('phone', $employee->phone) }}">@error('phone')
+                            <input class="form-control @error('telepon') is-invalid @enderror" name="telepon" value="{{ old('telepon', $employee->telepon) }}">@error('telepon')
                         <div class="invalid-feedback">
                             {{ $message }}
                         </div>
@@ -210,6 +203,29 @@
         if (!file) return;
         document.querySelector('#photo-preview').innerHTML = `<img src="${URL.createObjectURL(file)}" alt="Preview foto profil">`;
     });
+
+    // Hitung mundur cooldown foto profil (fallback teks server tetap tampil tanpa JS).
+    (() => {
+        const el = document.querySelector('#photo-cooldown-countdown');
+        if (!el) return;
+        const target = new Date(el.dataset.availableAt).getTime();
+        if (Number.isNaN(target)) return;
+        const pad = (n) => String(n).padStart(2, '0');
+        const tick = () => {
+            const diff = target - Date.now();
+            if (diff <= 0) {
+                el.textContent = 'sebentar lagi — muat ulang halaman ini';
+                clearInterval(timer);
+                return;
+            }
+            const d = Math.floor(diff / 86400000);
+            const h = Math.floor(diff % 86400000 / 3600000);
+            const m = Math.floor(diff % 3600000 / 60000);
+            el.textContent = d > 0 ? `${d} hari ${pad(h)} jam ${pad(m)} mnt lagi` : `${pad(h)} jam ${pad(m)} mnt lagi`;
+        };
+        const timer = setInterval(tick, 30000);
+        tick();
+    })();
 </script>
 @endpush
 @endsection

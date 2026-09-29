@@ -12,21 +12,21 @@ class AttendanceLocationSeeder extends Seeder
     {
         DB::transaction(function () {
             $location = AttendanceLocation::updateOrCreate(
-                ['name' => 'Kantor BUMDESMA TARUB LKD'],
+                ['nama' => 'Kantor BUMDESMA TARUB LKD'],
                 [
-                    'address' => 'Kantor Bumdesma Tarub LKD, Tarub, Kabupaten Tegal 52184',
-                    'latitude' => -6.926433,
-                    'longitude' => 109.185844,
-                    'radius_meters' => 100,
+                    'alamat' => 'Kantor Bumdesma Tarub LKD, Tarub, Kabupaten Tegal 52184',
+                    'lintang' => -6.926433,
+                    'bujur' => 109.185844,
+                    'radius_meter' => 100,
                     // Longgar agar GPS laptop (WiFi, akurasi ratusan meter) tetap bisa absen;
                     // admin bisa mengetatkan lagi via Kehadiran → Lokasi bila absen hanya via HP.
-                    'max_accuracy_meters' => 500,
-                    'enforce_radius' => true,
-                    'is_active' => true,
+                    'maks_akurasi_meter' => 500,
+                    'wajib_radius' => true,
+                    'aktif' => true,
                 ]
             );
 
-            AttendanceLocation::whereKeyNot($location->id)->update(['is_active' => false]);
+            AttendanceLocation::whereKeyNot($location->id)->update(['aktif' => false]);
         });
     }
 }

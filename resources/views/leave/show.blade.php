@@ -13,17 +13,17 @@
     <div class="col-lg-4">
         <div class="card border-0 shadow-sm text-center p-4 mb-4">
             <div class="employee-avatar mx-auto mb-3" style="width:110px;height:110px;font-size:2.2rem">
-                @if($leaveRequest->employee?->photo)
+                @if($leaveRequest->employee?->foto)
                     <img
-                        src="{{ asset('storage/'.$leaveRequest->employee->photo) }}"
+                        src="{{ asset('storage/'.$leaveRequest->employee->foto) }}"
                         alt="Foto {{ $leaveRequest->employee?->display_name }}">
                 @else
                     <span>{{ strtoupper(substr($leaveRequest->employee?->display_name ?? '-', 0, 1)) }}</span>
                 @endif
             </div>
             <h2 class="h5 mb-1">{{ $leaveRequest->employee?->display_name ?? '-' }}</h2>
-            <p class="text-secondary mb-2">{{ $leaveRequest->employee?->position?->name ?? 'Belum ada jabatan' }}</p>
-            <span class="badge text-bg-light border">{{ $leaveRequest->employee?->employee_code ?? '-' }}</span>
+            <p class="text-secondary mb-2">{{ $leaveRequest->employee?->position?->nama ?? 'Belum ada jabatan' }}</p>
+            <span class="badge text-bg-light border">{{ $leaveRequest->employee?->kode_karyawan ?? '-' }}</span>
         </div>
 
         @if($quota)
@@ -68,9 +68,9 @@
                 @forelse($history as $item)
                     <div class="d-flex justify-content-between align-items-center gap-2 py-2 @unless($loop->last) border-bottom @endunless">
                         <div>
-                            <strong class="d-block small">{{ $item->start_date->format('d M Y') }}</strong>
+                            <strong class="d-block small">{{ $item->tanggal_mulai->format('d M Y') }}</strong>
                             <small class="text-secondary">
-                                {{ $item->type === 'leave' ? 'Cuti' : ($item->type === 'sick' ? 'Sakit' : 'Izin') }} · {{ $item->total_days }} hari</small>
+                                {{ $item->jenis === 'leave' ? 'Cuti' : ($item->jenis === 'sick' ? 'Sakit' : 'Izin') }} · {{ $item->jumlah_hari }} hari</small>
                         </div>
                         @if($item->status === 'approved')
                             <span class="badge text-bg-success">Disetujui</span>
@@ -86,7 +86,7 @@
                 @if($history->isNotEmpty() && $leaveRequest->employee)
                     <a
                         class="btn btn-outline-primary btn-sm w-100 mt-3"
-                        href="{{ route('leave.index', ['search' => $leaveRequest->employee->employee_code]) }}">Lihat
+                        href="{{ route('leave.index', ['search' => $leaveRequest->employee->kode_karyawan]) }}">Lihat
                         Semua
                         Riwayat</a>
                 @endif
@@ -111,35 +111,35 @@
                     <div class="col-sm-6">
                         <small class="text-secondary d-block">Jenis Pengajuan</small>
                         <strong>
-                            {{ $leaveRequest->type === 'leave' ? 'Cuti' : ($leaveRequest->type === 'sick' ? 'Sakit' : 'Izin') }}
+                            {{ $leaveRequest->jenis === 'leave' ? 'Cuti' : ($leaveRequest->jenis === 'sick' ? 'Sakit' : 'Izin') }}
                         </strong>
                     </div>
                     <div class="col-sm-6">
                         <small class="text-secondary d-block">Jumlah Hari</small>
                         <strong>
-                            {{ $leaveRequest->total_days }} Hari</strong>
+                            {{ $leaveRequest->jumlah_hari }} Hari</strong>
                     </div>
                     <div class="col-sm-6">
                         <small class="text-secondary d-block">Tanggal Mulai</small>
                         <strong>
-                            {{ $leaveRequest->start_date->format('d F Y') }}
+                            {{ $leaveRequest->tanggal_mulai->format('d F Y') }}
                         </strong>
                     </div>
                     <div class="col-sm-6">
                         <small class="text-secondary d-block">Tanggal Selesai</small>
                         <strong>
-                            {{ $leaveRequest->end_date->format('d F Y') }}
+                            {{ $leaveRequest->tanggal_selesai->format('d F Y') }}
                         </strong>
                     </div>
                     <div class="col-12">
                         <small class="text-secondary d-block">Alasan</small>
                         <p class="mb-0">
-                            {{ $leaveRequest->reason }}
+                            {{ $leaveRequest->alasan }}
                         </p>
                     </div>
                     <div class="col-sm-6">
                         <small class="text-secondary d-block">Lampiran</small>
-                        @if($leaveRequest->attachment_path)
+                        @if($leaveRequest->jalur_lampiran)
                             <a href="{{ route('leave.attachment', $leaveRequest) }}">
                                 <i class="bi bi-paperclip me-1">
                                 </i>Unduh dokumen</a>
@@ -160,12 +160,12 @@
                             class="d-block">Oleh
                             {{ $leaveRequest->reviewer?->name ?? '-' }}
                             pada
-                            {{ $leaveRequest->reviewed_at?->format('d M Y H:i') ?? '-' }}.</small>
-                        @if($leaveRequest->review_note)
-                            <small class="d-block mt-1">Catatan Admin: {{ $leaveRequest->review_note }}</small>
+                            {{ $leaveRequest->diulas_pada?->format('d M Y H:i') ?? '-' }}.</small>
+                        @if($leaveRequest->catatan_ulasan)
+                            <small class="d-block mt-1">Catatan Admin: {{ $leaveRequest->catatan_ulasan }}</small>
                         @endif
-                        @if($leaveRequest->rejection_reason)
-                            <small class="d-block mt-1">Alasan penolakan: {{ $leaveRequest->rejection_reason }}</small>
+                        @if($leaveRequest->alasan_penolakan)
+                            <small class="d-block mt-1">Alasan penolakan: {{ $leaveRequest->alasan_penolakan }}</small>
                         @endif
                     </div>
                 @endif
@@ -186,6 +186,25 @@
                             data-bs-target="#rejectModal">
                         <i class="bi bi-x-lg me-2">
                         </i>Tolak</button>
+                    </div>
+                @endif
+
+                @if($leaveRequest->status === 'pending' && !auth()->user()->isAdmin() && $leaveRequest->karyawan_id === auth()->user()->employee?->id)
+                    <div class="d-flex flex-wrap gap-2 mt-4">
+                        <button
+                            class="btn btn-outline-primary"
+                            type="button"
+                            data-bs-toggle="modal"
+                            data-bs-target="#editLeaveModal">
+                        <i class="bi bi-pencil me-2">
+                        </i>Ubah</button>
+                        <button
+                            class="btn btn-outline-danger"
+                            type="button"
+                            data-bs-toggle="modal"
+                            data-bs-target="#cancelLeaveModal">
+                        <i class="bi bi-trash me-2">
+                        </i>Batalkan pengajuan</button>
                     </div>
                 @endif
             </div>
@@ -217,18 +236,18 @@
                         <div class="d-flex justify-content-between py-1">
                             <span class="text-secondary">Jenis</span>
                             <strong>
-                                {{ $leaveRequest->type === 'leave' ? 'Cuti' : ($leaveRequest->type === 'sick' ? 'Sakit' : 'Izin') }}
+                                {{ $leaveRequest->jenis === 'leave' ? 'Cuti' : ($leaveRequest->jenis === 'sick' ? 'Sakit' : 'Izin') }}
                             </strong>
                         </div>
                         <div class="d-flex justify-content-between py-1">
                             <span class="text-secondary">Periode</span>
                             <strong>
-                                {{ $leaveRequest->start_date->format('d M Y') }} - {{ $leaveRequest->end_date->format('d M Y') }}
+                                {{ $leaveRequest->tanggal_mulai->format('d M Y') }} - {{ $leaveRequest->tanggal_selesai->format('d M Y') }}
                             </strong>
                         </div>
                     </div>
-                    <label class="form-label" for="review_note">Catatan Admin (opsional)</label>
-                    <textarea class="form-control" id="review_note" name="review_note" rows="2">
+                    <label class="form-label" for="catatan_ulasan">Catatan Admin (opsional)</label>
+                    <textarea class="form-control" id="catatan_ulasan" name="catatan_ulasan" rows="2">
                     </textarea>
                 </div>
                 <div class="modal-footer">
@@ -253,19 +272,19 @@
                     </button>
                 </div>
                 <div class="modal-body">
-                    <label class="form-label" for="rejection_reason">Alasan Penolakan <span class="text-danger">*</span>
+                    <label class="form-label" for="alasan_penolakan">Alasan Penolakan <span class="text-danger">*</span>
                     </label>
                     <textarea
                         class="form-control"
-                        id="rejection_reason"
-                        name="rejection_reason"
+                        id="alasan_penolakan"
+                        name="alasan_penolakan"
                         rows="3"
                         minlength="10"
                         required>
                     </textarea>
                     <div class="form-text">Wajib diisi, minimal 10 karakter.</div>
                     <label class="form-label mt-3" for="reject_note">Catatan Admin (opsional)</label>
-                    <textarea class="form-control" id="reject_note" name="review_note" rows="2">
+                    <textarea class="form-control" id="reject_note" name="catatan_ulasan" rows="2">
                     </textarea>
                 </div>
                 <div class="modal-footer">
@@ -273,6 +292,92 @@
                     <button class="btn btn-danger" type="submit">
                         <i class="bi bi-x-lg me-2">
                         </i>Tolak Pengajuan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+@endif
+@if($leaveRequest->status === 'pending' && !auth()->user()->isAdmin() && $leaveRequest->karyawan_id === auth()->user()->employee?->id)
+    <div class="modal fade" id="editLeaveModal" tabindex="-1">
+        <div class="modal-dialog">
+            <form class="modal-content" method="POST" action="{{ route('leave.update', $leaveRequest) }}" enctype="multipart/form-data">
+                @csrf
+                @method('PUT')
+                <div class="modal-header">
+                    <h5 class="modal-title">Ubah Pengajuan</h5>
+                    <button class="btn-close" data-bs-dismiss="modal" type="button">
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <label class="form-label">Jenis pengajuan</label>
+                    <select class="form-select mb-3" name="jenis" required>
+                        <option value="leave" @selected($leaveRequest->jenis === 'leave')>Cuti</option>
+                        <option value="sick" @selected($leaveRequest->jenis === 'sick')>Sakit</option>
+                    </select>
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <label class="form-label">Mulai</label>
+                            <input
+                                class="form-control"
+                                type="date"
+                                name="tanggal_mulai"
+                                value="{{ $leaveRequest->tanggal_mulai->format('Y-m-d') }}"
+                                required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Selesai</label>
+                            <input
+                                class="form-control"
+                                type="date"
+                                name="tanggal_selesai"
+                                value="{{ $leaveRequest->tanggal_selesai->format('Y-m-d') }}"
+                                required>
+                        </div>
+                    </div>
+                    <div class="form-text mb-3">Pengajuan
+                        <strong>cuti</strong>
+                        minimal
+                        1
+                        minggu
+                        (7 hari)
+                        sebelum
+                        tanggal
+                        mulai.</div>
+                    <label class="form-label">Alasan</label>
+                    <textarea class="form-control mb-3" name="alasan" rows="3" required>{{ $leaveRequest->alasan }}</textarea>
+                    <label class="form-label">Dokumen pendukung @if($leaveRequest->jalur_lampiran)<small class="text-secondary">(ada lampiran — unggah baru untuk mengganti)</small>@endif</label>
+                    <input class="form-control" type="file" name="lampiran">
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-light border" data-bs-dismiss="modal" type="button">Batal</button>
+                    <button class="btn btn-primary" type="submit">Simpan perubahan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal fade" id="cancelLeaveModal" tabindex="-1">
+        <div class="modal-dialog">
+            <form class="modal-content" method="POST" action="{{ route('leave.destroy', $leaveRequest) }}">
+                @csrf
+                @method('DELETE')
+                <div class="modal-header">
+                    <h5 class="modal-title">Batalkan Pengajuan</h5>
+                    <button class="btn-close" data-bs-dismiss="modal" type="button">
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-0">Pengajuan
+                        <strong>{{ $leaveRequest->jenis === 'leave' ? 'cuti' : 'sakit' }}</strong>
+                        periode
+                        <strong>{{ $leaveRequest->tanggal_mulai->format('d M Y') }} - {{ $leaveRequest->tanggal_selesai->format('d M Y') }}</strong>
+                        akan dihapus permanen. Lanjutkan?</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-light border" data-bs-dismiss="modal" type="button">Kembali</button>
+                    <button class="btn btn-danger" type="submit">
+                        <i class="bi bi-trash me-2">
+                        </i>Ya, batalkan</button>
                 </div>
             </form>
         </div>

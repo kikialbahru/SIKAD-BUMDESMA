@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\AttendanceCorrectionController;
 use App\Http\Controllers\AttendanceLocationController;
@@ -136,6 +137,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/salary-components', [SalaryComponentController::class, 'store'])->name('salary-components.store');
         Route::put('/salary-components/{salaryComponent}', [SalaryComponentController::class, 'update'])->name('salary-components.update');
         Route::delete('/salary-components/{salaryComponent}', [SalaryComponentController::class, 'destroy'])->name('salary-components.destroy');
+        Route::get('/activity-logs', [ActivityLogController::class, 'index'])->name('activity-logs.index');
     });
     Route::middleware('admin')->prefix('holidays')->name('holidays.')->group(function () {
         Route::get('/', [HolidayController::class, 'index'])->name('index');

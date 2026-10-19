@@ -8,6 +8,7 @@ use App\Models\LeaveRequest;
 use App\Models\User;
 use App\Notifications\LeaveRequestReviewed;
 use App\Notifications\LeaveRequestSubmitted;
+use App\Services\ActivityLogger;
 use Carbon\CarbonPeriod;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -22,7 +23,7 @@ class LeaveRequestController extends Controller
     {
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:100'],
-            'jenis' => ['nullable', 'in:leave,sick'],
+            'jenis' => ['nullable', 'in:leave,sick,duty'],
             'status' => ['nullable', 'in:pending,approved,rejected'],
             'date_from' => ['nullable', 'date'],
             'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
@@ -92,7 +93,7 @@ class LeaveRequestController extends Controller
         abort_unless($employee?->aktif, 403, 'Akun karyawan belum terhubung.');
 
         $data = $request->validate([
-            'jenis' => ['required', 'in:leave,sick'],
+            'jenis' => ['required', 'in:leave,sick,duty'],
             'tanggal_mulai' => ['required', 'date', 'after_or_equal:today'],
             'tanggal_selesai' => ['required', 'date', 'after_or_equal:tanggal_mulai'],
             'alasan' => ['required', 'string', 'max:2000'],
@@ -102,24 +103,30 @@ class LeaveRequestController extends Controller
         $data['jumlah_hari'] = CarbonPeriod::create($data['tanggal_mulai'], $data['tanggal_selesai'])->count();
         $data['jalur_lampiran'] = $request->file('lampiran')?->store('leave-attachments');
 
-        // Cuti wajib diajukan minimal 1 minggu (7 hari kalender) sebelumnya.
-        if ($data['jenis'] === 'leave' && $data['tanggal_mulai'] < now()->addDays(7)->toDateString()) {
+        // Cuti maksimal 3 hari berturut-turut dalam satu pengajuan.
+        if ($data['jenis'] === 'leave' && $data['jumlah_hari'] > 3) {
             throw ValidationException::withMessages([
-                'tanggal_mulai' => 'Pengajuan cuti minimal 1 minggu (7 hari) sebelum tanggal mulai cuti.',
+                'tanggal_selesai' => 'Pengajuan cuti maksimal 3 hari berturut-turut dalam satu pengajuan.',
             ]);
         }
 
         $leaveRequest = LeaveRequest::create($data);
         $leaveRequest->load('employee');
 
-        Notification::send(User::where('role', 'admin')->get(), new LeaveRequestSubmitted($leaveRequest));
+        // Notifikasi email bersifat pelengkap: kegagalan SMTP tidak boleh
+        // menggagalkan pengajuan yang sudah tersimpan.
+        try {
+            Notification::send(User::where('role', 'admin')->get(), new LeaveRequestSubmitted($leaveRequest));
+        } catch (\Throwable $e) {
+            report($e);
+        }
 
         return back()->with('success', 'Pengajuan berhasil dikirim dan menunggu persetujuan.');
     }
 
     /**
      * Ubah pengajuan milik sendiri yang masih pending.
-     * Aturan validasi sama dengan pengajuan baru (termasuk 7 hari untuk cuti).
+     * Aturan validasi sama dengan pengajuan baru (cuti boleh dadakan, maks 3 hari).
      */
     public function update(Request $request, LeaveRequest $leaveRequest)
     {
@@ -128,7 +135,7 @@ class LeaveRequestController extends Controller
         abort_if($leaveRequest->karyawan_id !== $employee->id, 403);
 
         $data = $request->validate([
-            'jenis' => ['required', 'in:leave,sick'],
+            'jenis' => ['required', 'in:leave,sick,duty'],
             'tanggal_mulai' => ['required', 'date', 'after_or_equal:today'],
             'tanggal_selesai' => ['required', 'date', 'after_or_equal:tanggal_mulai'],
             'alasan' => ['required', 'string', 'max:2000'],
@@ -136,10 +143,10 @@ class LeaveRequestController extends Controller
         ]);
         $data['jumlah_hari'] = CarbonPeriod::create($data['tanggal_mulai'], $data['tanggal_selesai'])->count();
 
-        // Aturan 7 hari berlaku juga saat mengubah ke cuti.
-        if ($data['jenis'] === 'leave' && $data['tanggal_mulai'] < now()->addDays(7)->toDateString()) {
+        // Cuti maksimal 3 hari berturut-turut dalam satu pengajuan (berlaku juga saat ubah).
+        if ($data['jenis'] === 'leave' && $data['jumlah_hari'] > 3) {
             throw ValidationException::withMessages([
-                'tanggal_mulai' => 'Pengajuan cuti minimal 1 minggu (7 hari) sebelum tanggal mulai cuti.',
+                'tanggal_selesai' => 'Pengajuan cuti maksimal 3 hari berturut-turut dalam satu pengajuan.',
             ]);
         }
 
@@ -217,6 +224,9 @@ class LeaveRequestController extends Controller
                 abort_unless($employee?->aktif, 422, 'Karyawan sudah tidak aktif.');
 
                 if ($fresh->jenis === 'leave') {
+                    if ($fresh->jumlah_hari > 3) {
+                        abort(422, 'Pengajuan cuti maksimal 3 hari berturut-turut dalam satu pengajuan.');
+                    }
                     $usage = LeaveQuota::usage($employee, (int) $fresh->tanggal_mulai->format('Y'));
                     if ($usage['remaining'] < $fresh->jumlah_hari) {
                         abort(422, 'Kuota cuti karyawan tidak mencukupi.');
@@ -230,6 +240,21 @@ class LeaveRequestController extends Controller
                         ->exists();
                     if ($overlap) {
                         abort(422, 'Terdapat cuti yang sudah disetujui pada periode tersebut.');
+                    }
+                }
+
+                // Dinas keluar tidak memotong kuota cuti dan tidak dibatasi 3 hari,
+                // cukup cegah double-booking dengan dinas yang sudah disetujui.
+                if ($fresh->jenis === 'duty') {
+                    $overlap = LeaveRequest::where('karyawan_id', $employee->id)
+                        ->where('jenis', 'duty')
+                        ->where('status', 'approved')
+                        ->where('id', '!=', $fresh->id)
+                        ->whereDate('tanggal_mulai', '<=', $fresh->tanggal_selesai->toDateString())
+                        ->whereDate('tanggal_selesai', '>=', $fresh->tanggal_mulai->toDateString())
+                        ->exists();
+                    if ($overlap) {
+                        abort(422, 'Terdapat dinas keluar yang sudah disetujui pada periode tersebut.');
                     }
                 }
             }
@@ -246,14 +271,24 @@ class LeaveRequestController extends Controller
                 foreach (CarbonPeriod::create($fresh->tanggal_mulai, $fresh->tanggal_selesai) as $date) {
                     Attendance::updateOrCreate(
                         ['karyawan_id' => $fresh->karyawan_id, 'tanggal' => $date->toDateString()],
-                        ['status' => $fresh->jenis === 'sick' ? 'sick' : ($fresh->jenis === 'leave' ? 'leave' : 'permission'), 'catatan' => $fresh->alasan]
+                        ['status' => in_array($fresh->jenis, ['leave', 'sick', 'duty'], true) ? $fresh->jenis : 'permission', 'catatan' => $fresh->alasan]
                     );
                 }
             }
         });
 
         $leaveRequest->refresh()->load('employee.user');
-        $leaveRequest->employee?->user?->notify(new LeaveRequestReviewed($leaveRequest));
+        try {
+            $leaveRequest->employee?->user?->notify(new LeaveRequestReviewed($leaveRequest));
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
+        ActivityLogger::log('cuti.review', $leaveRequest, [
+            'karyawan_id' => $leaveRequest->karyawan_id,
+            'jenis' => $leaveRequest->jenis,
+            'status' => $data['status'],
+        ]);
 
         return back()->with('success', $data['status'] === 'approved' ? 'Pengajuan disetujui.' : 'Pengajuan ditolak.');
     }

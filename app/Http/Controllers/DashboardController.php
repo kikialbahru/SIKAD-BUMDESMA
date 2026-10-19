@@ -21,6 +21,13 @@ class DashboardController extends Controller
         return view('dashboard.index', [
             'employee' => $employee,
             'attendance' => $attendance,
+            'isOffDay' => $today->isWeekend(),
+            'todayLeave' => $employee ? LeaveRequest::where('karyawan_id', $employee->id)
+                ->where('status', 'approved')
+                ->whereDate('tanggal_mulai', '<=', $today->toDateString())
+                ->whereDate('tanggal_selesai', '>=', $today->toDateString())
+                ->latest()
+                ->first() : null,
             'checkout' => ($employee && $attendance?->waktu_masuk) ? CheckoutPolicy::checkoutEligibility($employee, $attendance) : null,
             'times' => $employee ? CheckoutPolicy::workTimes($employee, $today) : null,
             'presentCount' => $employee?->attendances()->whereBetween('tanggal', [$monthStart, $today])->whereIn('status', ['present', 'late'])->count() ?? 0,
@@ -77,6 +84,12 @@ class DashboardController extends Controller
             'notCheckedIn' => Employee::with('user')->where('aktif', true)
                 ->whereDoesntHave('attendances', function ($query) use ($today) {
                     $query->whereDate('tanggal', $today)->whereNotNull('waktu_masuk');
+                })
+                // Karyawan dengan cuti/sakit/dinas yang disetujui hari ini tidak perlu absen.
+                ->whereDoesntHave('leaveRequests', function ($query) use ($today) {
+                    $query->where('status', 'approved')
+                        ->whereDate('tanggal_mulai', '<=', $today->toDateString())
+                        ->whereDate('tanggal_selesai', '>=', $today->toDateString());
                 })
                 ->orderBy('nama')
                 ->get(['id', 'kode_karyawan', 'nama', 'telepon']),

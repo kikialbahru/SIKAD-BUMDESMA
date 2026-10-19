@@ -146,7 +146,7 @@
                     <select class="form-select"
                         name="status">
                         <option value="">Semua status</option>
-                        @foreach (['present' => 'Hadir', 'late' => 'Terlambat', 'permission' => 'Izin', 'leave' => 'Cuti', 'sick' => 'Sakit', 'absent' => 'Alpa', 'pending' => 'Menunggu', 'approved' => 'Disetujui', 'rejected' => 'Ditolak', 'draft' => 'Draft', 'verified' => 'Diverifikasi', 'paid' => 'Dibayar'] as $value => $label)
+                        @foreach (['present' => 'Hadir', 'late' => 'Terlambat', 'permission' => 'Izin', 'leave' => 'Cuti', 'sick' => 'Sakit', 'duty' => 'Dinas', 'absent' => 'Alpa', 'pending' => 'Menunggu', 'approved' => 'Disetujui', 'rejected' => 'Ditolak', 'draft' => 'Draft', 'verified' => 'Diverifikasi', 'paid' => 'Dibayar'] as $value => $label)
                             <option value="{{ $value }}" @selected(($filters['status'] ?? '') === $value)>
                                 {{ $label }}
                             </option>
@@ -191,6 +191,7 @@
                             <th>Terlambat</th>
                             <th>Izin</th>
                             <th>Cuti</th>
+                            <th>Dinas</th>
                             <th>Total Hari</th>
                             <th>Persentase</th>
                             <th>Aksi</th>
@@ -207,6 +208,7 @@
                                 <td>{{ $item['late'] }}</td>
                                 <td>{{ $item['permission'] }}</td>
                                 <td>{{ $item['leave'] }}</td>
+                                <td>{{ $item['duty'] ?? 0 }}</td>
                                 <td>{{ $item['total'] }}</td>
                                 <td>
                                     <span class="badge text-bg-primary">
@@ -221,7 +223,7 @@
                                         </a>
                                         </td>
                         </tr>@empty<tr>
-                                <td colspan="11" class="text-center text-secondary py-5">Tidak ada data laporan pada
+                                <td colspan="12" class="text-center text-secondary py-5">Tidak ada data laporan pada
                                     periode ini.</td>
                             </tr>
                         @endforelse
@@ -255,7 +257,7 @@
                                 <td>{{ $index + 1 }}</td>
                                 <td>{{ $item->employee?->kode_karyawan }}</td>
                                 <td>{{ $item->employee?->user?->name }}</td>
-                                <td>{{ ucfirst($item->jenis) }}</td>
+                                <td>{{ $item->jenis === 'leave' ? 'Cuti' : ($item->jenis === 'sick' ? 'Sakit' : ($item->jenis === 'duty' ? 'Dinas Keluar' : ucfirst($item->jenis))) }}</td>
                                 <td>{{ $item->tanggal_mulai->format('d/m/Y') }}</td>
                                 <td>{{ $item->tanggal_selesai->format('d/m/Y') }}</td>
                                 <td>{{ $item->jumlah_hari }} hari</td>

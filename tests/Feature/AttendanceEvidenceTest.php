@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Attendance;
 use App\Models\AttendanceLocation;
+use App\Models\AttendanceSetting;
 use App\Models\Employee;
 use App\Models\User;
 use Carbon\Carbon;
@@ -235,6 +236,54 @@ class AttendanceEvidenceTest extends TestCase
         $response->assertOk();
         $response->assertSee('checkInModal', false);
         $response->assertSee('checkOutModal', false);
+    }
+
+    public function test_check_in_before_opening_time_rejected(): void
+    {
+        Carbon::setTestNow('2026-09-10 06:59:00');
+        Storage::fake('public');
+        AttendanceSetting::current()->update(['jam_masuk' => '08:00', 'mulai_absen_masuk' => '07:00']);
+        $user = $this->employeeUser();
+
+        $response = $this->actingAs($user)->postJson('/attendance/check-in', [
+            'foto' => $this->photo(), 'lintang' => -6.9, 'bujur' => 109.1, 'akurasi' => 10,
+        ]);
+
+        $response->assertStatus(422);
+        $this->assertStringContainsString('dibuka mulai pukul 07:00', $response->json('message'));
+        $this->assertNull(Attendance::first()?->waktu_masuk);
+    }
+
+    public function test_check_in_within_grace_period_is_present(): void
+    {
+        Carbon::setTestNow('2026-09-10 08:10:00');
+        Storage::fake('public');
+        AttendanceSetting::current()->update(['jam_masuk' => '08:00', 'toleransi_telat_menit' => 10]);
+        $user = $this->employeeUser();
+
+        $this->actingAs($user)->postJson('/attendance/check-in', [
+            'foto' => $this->photo(), 'lintang' => -6.9, 'bujur' => 109.1, 'akurasi' => 10,
+        ])->assertOk();
+
+        $attendance = Attendance::first();
+        $this->assertEquals('present', $attendance->status);
+        $this->assertEquals(0, $attendance->menit_telat);
+    }
+
+    public function test_check_in_after_grace_period_is_late(): void
+    {
+        Carbon::setTestNow('2026-09-10 08:11:00');
+        Storage::fake('public');
+        AttendanceSetting::current()->update(['jam_masuk' => '08:00', 'toleransi_telat_menit' => 10]);
+        $user = $this->employeeUser();
+
+        $this->actingAs($user)->postJson('/attendance/check-in', [
+            'foto' => $this->photo(), 'lintang' => -6.9, 'bujur' => 109.1, 'akurasi' => 10,
+        ])->assertOk();
+
+        $attendance = Attendance::first();
+        $this->assertEquals('late', $attendance->status);
+        $this->assertEquals(11, $attendance->menit_telat);
     }
 
     protected function tearDown(): void

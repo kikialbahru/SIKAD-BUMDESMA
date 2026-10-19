@@ -224,7 +224,7 @@
                     @enderror
                 </div>
                 <div class="mb-0">
-                    <label class="form-label" for="attendance_allowance_display">Uang Kehadiran</label>
+                    <label class="form-label" for="attendance_allowance_display">Tunjangan</label>
                     <div class="input-group">
                         <span class="input-group-text">Rp</span>
                         <input

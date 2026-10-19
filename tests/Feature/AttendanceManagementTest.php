@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Attendance;
+use App\Models\AttendanceSetting;
 use App\Models\Employee;
 use App\Models\Holiday;
 use App\Models\User;
@@ -45,6 +46,7 @@ class AttendanceManagementTest extends TestCase
     public function test_admin_can_input_manual_attendance(): void
     {
         Carbon::setTestNow('2026-09-16 10:00:00');
+        AttendanceSetting::current()->update(['jam_masuk' => '08:00', 'toleransi_telat_menit' => 10]);
         $admin = $this->adminUser();
         $employee = $this->employeeUser()->employee;
 
@@ -60,8 +62,9 @@ class AttendanceManagementTest extends TestCase
         $response->assertRedirect(route('attendance.index'));
         $attendance = Attendance::first();
         $this->assertEquals('2026-09-16 08:05:00', $attendance->waktu_masuk->format('Y-m-d H:i:s'));
-        $this->assertEquals(5, $attendance->menit_telat);
-        $this->assertEquals('late', $attendance->status);
+        // Tiba dalam batas toleransi (default 10 menit) → Hadir, 0 menit.
+        $this->assertEquals(0, $attendance->menit_telat);
+        $this->assertEquals('present', $attendance->status);
         $this->assertEquals(415, $attendance->menit_kerja);
         $this->assertEquals('checked_out', $attendance->status_pulang);
         $this->assertEquals('Lupa absen, HP mati.', $attendance->catatan);
@@ -120,6 +123,7 @@ class AttendanceManagementTest extends TestCase
     public function test_admin_can_update_correction_and_resets_approval(): void
     {
         Carbon::setTestNow('2026-09-16 10:00:00');
+        AttendanceSetting::current()->update(['jam_masuk' => '08:00', 'toleransi_telat_menit' => 10]);
         $admin = $this->adminUser();
         $employee = $this->employeeUser()->employee;
         $attendance = Attendance::create([
@@ -137,14 +141,15 @@ class AttendanceManagementTest extends TestCase
         $response = $this->actingAs($admin)->put(route('attendance.corrections.update', $attendance), [
             'karyawan_id' => $employee->id,
             'tanggal' => '2026-09-16',
-            'jam_masuk' => '08:10',
+            'jam_masuk' => '08:11',
             'jam_pulang' => '15:00',
             'status' => 'present',
         ]);
 
         $response->assertRedirect(route('attendance.index'));
         $attendance->refresh();
-        $this->assertEquals(10, $attendance->menit_telat);
+        // Lewat toleransi 10 menit → telat, dihitung penuh dari jam masuk.
+        $this->assertEquals(11, $attendance->menit_telat);
         $this->assertEquals('late', $attendance->status);
         $this->assertEquals('checked_out', $attendance->status_pulang);
         $this->assertNull($attendance->disetujui_oleh);

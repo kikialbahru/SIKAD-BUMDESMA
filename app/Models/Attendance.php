@@ -22,4 +22,36 @@ class Attendance extends Model
     {
         return $this->belongsTo(User::class, 'disetujui_oleh');
     }
+
+    /**
+     * Flag anomali untuk tinjauan admin. Browser tidak dapat mendeteksi
+     * mock-GPS/fake-location secara andal, jadi sistem menandai data yang
+     * janggal (akurasi buruk, di luar radius, tanpa foto) alih-alih memblokir.
+     *
+     * @return string[]
+     */
+    public function anomalyFlags(): array
+    {
+        $flags = [];
+        if ($this->waktu_masuk && ! $this->foto_masuk) {
+            $flags[] = 'Masuk tanpa foto (input manual/koreksi)';
+        }
+        if ($this->akurasi_masuk !== null && $this->akurasi_masuk > 500) {
+            $flags[] = 'Akurasi GPS masuk buruk (±'.$this->akurasi_masuk.' m)';
+        }
+        if ($this->lokasi_masuk_valid === false) {
+            $flags[] = 'Masuk di luar radius kantor';
+        }
+        if ($this->waktu_pulang && ! $this->foto_pulang) {
+            $flags[] = 'Pulang tanpa foto (input manual/koreksi)';
+        }
+        if ($this->akurasi_pulang !== null && $this->akurasi_pulang > 500) {
+            $flags[] = 'Akurasi GPS pulang buruk (±'.$this->akurasi_pulang.' m)';
+        }
+        if ($this->lokasi_pulang_valid === false) {
+            $flags[] = 'Pulang di luar radius kantor';
+        }
+
+        return $flags;
+    }
 }

@@ -52,9 +52,22 @@ class CheckoutPolicy
             'start' => Carbon::parse($day.' '.$start),
             'end' => $endDt,
             'tolerance' => (int) $tolerance,
+            'checkin_start' => Carbon::parse($day.' '.substr((string) $settings->mulai_absen_masuk, 0, 5)),
             'window_start' => $endDt->copy()->subMinutes($before),
             'window_end' => $endDt->copy()->addMinutes($after),
         ];
+    }
+
+    /**
+     * Menit keterlambatan: 0 bila tiba dalam batas toleransi setelah jam masuk,
+     * selebihnya dihitung penuh dari jam masuk (mis. jam 08:00 + toleransi 10
+     * → tiba 08:11 tercatat telat 11 menit).
+     */
+    public static function lateMinutes(Carbon $start, Carbon $arrival, int $tolerance): int
+    {
+        $raw = max(0, $start->diffInMinutes($arrival, false));
+
+        return $raw > $tolerance ? $raw : 0;
     }
 
     /**

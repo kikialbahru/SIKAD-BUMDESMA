@@ -20,6 +20,7 @@ class AttendanceSettingController extends Controller
         $data = $request->validate([
             'jam_masuk' => ['required', 'date_format:H:i'],
             'jam_pulang' => ['required', 'date_format:H:i', 'different:jam_masuk'],
+            'mulai_absen_masuk' => ['required', 'date_format:H:i'],
             'toleransi_telat_menit' => ['required', 'integer', 'min:0', 'max:180'],
             'mulai_absen_pulang' => ['required', 'date_format:H:i'],
             'akhir_absen_pulang' => ['required', 'date_format:H:i', 'different:mulai_absen_pulang'],

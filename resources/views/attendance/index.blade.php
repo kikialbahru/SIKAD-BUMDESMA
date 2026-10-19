@@ -48,7 +48,7 @@
                         <select class="form-select"
                             name="status">
                             <option value="">Semua status</option>
-                            @foreach (['present' => 'Hadir', 'late' => 'Terlambat', 'leave' => 'Cuti', 'permission' => 'Izin', 'sick' => 'Sakit', 'absent' => 'Alpa'] as $value => $label)
+                            @foreach (['present' => 'Hadir', 'late' => 'Terlambat', 'leave' => 'Cuti', 'permission' => 'Izin', 'sick' => 'Sakit', 'duty' => 'Dinas Keluar', 'absent' => 'Alpa'] as $value => $label)
                                 <option value="{{ $value }}" @selected(($filters['status'] ?? '') === $value)>
                                     {{ $label }}
                                 </option>
@@ -161,7 +161,7 @@
                                 <td>
                                     <span
                                         class="badge text-bg-{{ $attendance->status === 'late' ? 'warning' : ($attendance->status === 'present' ? 'success' : 'secondary') }}">
-                                        {{ ['present' => 'Hadir', 'late' => 'Terlambat', 'leave' => 'Cuti', 'permission' => 'Izin', 'sick' => 'Sakit', 'absent' => 'Alpa'][$attendance->status] ?? ucfirst($attendance->status) }}
+                                        {{ ['present' => 'Hadir', 'late' => 'Terlambat', 'leave' => 'Cuti', 'permission' => 'Izin', 'sick' => 'Sakit', 'duty' => 'Dinas Keluar', 'absent' => 'Alpa'][$attendance->status] ?? ucfirst($attendance->status) }}
                                         </span>
                                 </td>
                                 <td>

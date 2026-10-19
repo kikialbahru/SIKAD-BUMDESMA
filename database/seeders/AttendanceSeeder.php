@@ -16,7 +16,7 @@ class AttendanceSeeder extends Seeder
         $schedule = WorkSchedule::firstOrCreate(['nama' => 'Jam Kerja Reguler'], [
             'jam_masuk' => '08:00',
             'jam_pulang' => '15:00',
-            'toleransi_telat_menit' => 15,
+            'toleransi_telat_menit' => 10,
             'hari_kerja' => ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
         ]);
 

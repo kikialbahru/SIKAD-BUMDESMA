@@ -14,7 +14,7 @@
             </i>Koreksi</a>
     @endif
     <span class="badge text-bg-{{ $attendance->status === 'late' ? 'warning' : ($attendance->status === 'present' ? 'success' : 'secondary') }} fs-6">
-        {{ ['present' => 'Hadir', 'late' => 'Terlambat', 'leave' => 'Cuti', 'permission' => 'Izin', 'sick' => 'Sakit', 'absent' => 'Alpa'][$attendance->status] ?? ucfirst($attendance->status) }}
+        {{ ['present' => 'Hadir', 'late' => 'Terlambat', 'leave' => 'Cuti', 'permission' => 'Izin', 'sick' => 'Sakit', 'duty' => 'Dinas Keluar', 'absent' => 'Alpa'][$attendance->status] ?? ucfirst($attendance->status) }}
     </span>
 </div>
 
@@ -24,6 +24,22 @@
     </i>
     <div>
         <strong>Keterangan:</strong> {{ $attendance->catatan }}
+    </div>
+</div>
+@endif
+
+@php($anomalies = $attendance->anomalyFlags())
+@if($anomalies && auth()->user()->isAdmin())
+<div class="alert alert-warning d-flex align-items-start gap-2">
+    <i class="bi bi-exclamation-triangle-fill mt-1">
+    </i>
+    <div>
+        <strong>Perlu perhatian:</strong>
+        <ul class="mb-0 ps-3">
+            @foreach($anomalies as $flag)
+                <li>{{ $flag }}</li>
+            @endforeach
+        </ul>
     </div>
 </div>
 @endif

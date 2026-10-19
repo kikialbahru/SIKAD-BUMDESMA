@@ -11,6 +11,7 @@ class AttendanceSetting extends Model
     protected $fillable = [
         'jam_masuk',
         'jam_pulang',
+        'mulai_absen_masuk',
         'toleransi_telat_menit',
         'mulai_absen_pulang',
         'akhir_absen_pulang',
@@ -27,7 +28,8 @@ class AttendanceSetting extends Model
         return static::firstOrCreate(['id' => 1], [
             'jam_masuk' => '08:00',
             'jam_pulang' => '15:00',
-            'toleransi_telat_menit' => 30,
+            'mulai_absen_masuk' => '07:00',
+            'toleransi_telat_menit' => 10,
             'mulai_absen_pulang' => '14:30',
             'akhir_absen_pulang' => '15:30',
             'wajib_persetujuan_pulang' => true,

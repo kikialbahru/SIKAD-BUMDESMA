@@ -98,7 +98,7 @@
                             <td class="text-end text-nowrap">Rp {{ number_format($payroll->gaji_pokok, 0, ',', '.') }}</td>
                         </tr>
                         <tr>
-                            <td>Tunjangan kehadiran</td>
+                            <td>Tunjangan</td>
                             <td class="text-end text-nowrap">Rp {{ number_format($payroll->tunjangan_kehadiran, 0, ',', '.') }}</td>
                         </tr>
                         <tr>

@@ -70,7 +70,7 @@
                         <div>
                             <strong class="d-block small">{{ $item->tanggal_mulai->format('d M Y') }}</strong>
                             <small class="text-secondary">
-                                {{ $item->jenis === 'leave' ? 'Cuti' : ($item->jenis === 'sick' ? 'Sakit' : 'Izin') }} · {{ $item->jumlah_hari }} hari</small>
+                                {{ $item->jenis === 'leave' ? 'Cuti' : ($item->jenis === 'sick' ? 'Sakit' : ($item->jenis === 'duty' ? 'Dinas Keluar' : 'Izin')) }} · {{ $item->jumlah_hari }} hari</small>
                         </div>
                         @if($item->status === 'approved')
                             <span class="badge text-bg-success">Disetujui</span>
@@ -111,7 +111,7 @@
                     <div class="col-sm-6">
                         <small class="text-secondary d-block">Jenis Pengajuan</small>
                         <strong>
-                            {{ $leaveRequest->jenis === 'leave' ? 'Cuti' : ($leaveRequest->jenis === 'sick' ? 'Sakit' : 'Izin') }}
+                            {{ $leaveRequest->jenis === 'leave' ? 'Cuti' : ($leaveRequest->jenis === 'sick' ? 'Sakit' : ($leaveRequest->jenis === 'duty' ? 'Dinas Keluar' : 'Izin')) }}
                         </strong>
                     </div>
                     <div class="col-sm-6">
@@ -236,7 +236,7 @@
                         <div class="d-flex justify-content-between py-1">
                             <span class="text-secondary">Jenis</span>
                             <strong>
-                                {{ $leaveRequest->jenis === 'leave' ? 'Cuti' : ($leaveRequest->jenis === 'sick' ? 'Sakit' : 'Izin') }}
+                                {{ $leaveRequest->jenis === 'leave' ? 'Cuti' : ($leaveRequest->jenis === 'sick' ? 'Sakit' : ($leaveRequest->jenis === 'duty' ? 'Dinas Keluar' : 'Izin')) }}
                             </strong>
                         </div>
                         <div class="d-flex justify-content-between py-1">
@@ -313,6 +313,7 @@
                     <select class="form-select mb-3" name="jenis" required>
                         <option value="leave" @selected($leaveRequest->jenis === 'leave')>Cuti</option>
                         <option value="sick" @selected($leaveRequest->jenis === 'sick')>Sakit</option>
+                        <option value="duty" @selected($leaveRequest->jenis === 'duty')>Dinas Keluar</option>
                     </select>
                     <div class="row g-3 mb-3">
                         <div class="col-6">
@@ -336,13 +337,9 @@
                     </div>
                     <div class="form-text mb-3">Pengajuan
                         <strong>cuti</strong>
-                        minimal
-                        1
-                        minggu
-                        (7 hari)
-                        sebelum
-                        tanggal
-                        mulai.</div>
+                        dapat dilakukan mendadak (tanpa batas H-7),
+                        maksimal 3 hari berturut-turut. Kuota 12 hari/tahun.
+                        <strong>Dinas keluar</strong> tidak memotong kuota dan tidak perlu absen.</div>
                     <label class="form-label">Alasan</label>
                     <textarea class="form-control mb-3" name="alasan" rows="3" required>{{ $leaveRequest->alasan }}</textarea>
                     <label class="form-label">Dokumen pendukung @if($leaveRequest->jalur_lampiran)<small class="text-secondary">(ada lampiran — unggah baru untuk mengganti)</small>@endif</label>
@@ -368,7 +365,7 @@
                 </div>
                 <div class="modal-body">
                     <p class="mb-0">Pengajuan
-                        <strong>{{ $leaveRequest->jenis === 'leave' ? 'cuti' : 'sakit' }}</strong>
+                        <strong>{{ $leaveRequest->jenis === 'leave' ? 'cuti' : ($leaveRequest->jenis === 'sick' ? 'sakit' : ($leaveRequest->jenis === 'duty' ? 'dinas keluar' : 'izin')) }}</strong>
                         periode
                         <strong>{{ $leaveRequest->tanggal_mulai->format('d M Y') }} - {{ $leaveRequest->tanggal_selesai->format('d M Y') }}</strong>
                         akan dihapus permanen. Lanjutkan?</p>

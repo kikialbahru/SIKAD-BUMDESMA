@@ -7,6 +7,7 @@ use App\Models\AttendanceLocation;
 use App\Models\AttendanceSetting;
 use App\Models\Employee;
 use App\Models\LeaveRequest;
+use App\Services\ActivityLogger;
 use App\Services\AttendanceLocationService;
 use App\Services\CheckoutPolicy;
 use Illuminate\Http\Request;
@@ -19,7 +20,7 @@ class AttendanceController extends Controller
             'search' => ['nullable', 'string', 'max:100'],
             'date_from' => ['nullable', 'date'],
             'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
-            'status' => ['nullable', 'in:present,late,leave,permission,sick,absent'],
+            'status' => ['nullable', 'in:present,late,leave,permission,sick,duty,absent'],
             'status_pulang' => ['nullable', 'in:waiting,approved,rejected,checked_out'],
             'month' => ['nullable', 'date_format:Y-m'],
             'karyawan_id' => ['nullable', 'integer', 'exists:karyawan,id'],
@@ -89,13 +90,20 @@ class AttendanceController extends Controller
         abort_unless($employee?->aktif, 403, 'Akun karyawan belum terhubung.');
 
         $now = now();
+        if ($now->isWeekend()) {
+            return $this->attendanceFailed($request, 'Sabtu dan Minggu libur, tidak perlu absen.');
+        }
         $onLeave = LeaveRequest::where('karyawan_id', $employee->id)
             ->where('status', 'approved')
             ->whereDate('tanggal_mulai', '<=', $now->toDateString())
             ->whereDate('tanggal_selesai', '>=', $now->toDateString())
             ->exists();
         if ($onLeave) {
-            return $this->attendanceFailed($request, 'Anda memiliki pengajuan cuti/izin yang disetujui pada hari ini.');
+            return $this->attendanceFailed($request, 'Anda memiliki pengajuan cuti/sakit/dinas keluar yang disetujui pada hari ini, tidak perlu absen.');
+        }
+        $times = CheckoutPolicy::workTimes($employee, $now);
+        if ($now->lt($times['checkin_start'])) {
+            return $this->attendanceFailed($request, 'Absen masuk dibuka mulai pukul '.$times['checkin_start']->format('H:i').'.');
         }
         $attendance = Attendance::firstOrCreate(['karyawan_id' => $employee->id, 'tanggal' => $now->toDateString()]);
         if ($attendance->waktu_masuk) {
@@ -107,9 +115,7 @@ class AttendanceController extends Controller
             return $this->attendanceFailed($request, $evidence['message'], 422);
         }
 
-        $lateMinutes = 0;
-        $times = CheckoutPolicy::workTimes($employee, $now);
-        $lateMinutes = max(0, $times['start']->diffInMinutes($now, false));
+        $lateMinutes = CheckoutPolicy::lateMinutes($times['start'], $now, $times['tolerance']);
 
         $attendance->update([
             'waktu_masuk' => $now,
@@ -130,6 +136,9 @@ class AttendanceController extends Controller
     {
         abort_if($request->user()->isAdmin(), 403, 'Administrator tidak perlu melakukan absensi.');
         $employee = $request->user()->employee;
+        if (now()->isWeekend()) {
+            return $this->attendanceFailed($request, 'Sabtu dan Minggu libur, tidak perlu absen.');
+        }
         $attendance = $employee?->attendances()->whereDate('tanggal', today())->first();
         abort_unless($attendance?->waktu_masuk, 422, 'Lakukan absensi masuk terlebih dahulu.');
 
@@ -259,6 +268,13 @@ class AttendanceController extends Controller
                 'disetujui_pada' => now(),
             ]);
 
+            ActivityLogger::log('checkout.approval', $attendance, [
+                'keputusan' => 'approved',
+                'tipe' => $data['type'] ?? 'early',
+                'karyawan_id' => $attendance->karyawan_id,
+                'tanggal' => $attendance->tanggal->toDateString(),
+            ]);
+
             return back()->with('success', 'Pulang lebih awal berhasil diizinkan untuk karyawan.');
         }
 
@@ -267,6 +283,12 @@ class AttendanceController extends Controller
             'tipe_persetujuan_pulang' => null,
             'disetujui_oleh' => null,
             'disetujui_pada' => null,
+        ]);
+
+        ActivityLogger::log('checkout.approval', $attendance, [
+            'keputusan' => 'rejected',
+            'karyawan_id' => $attendance->karyawan_id,
+            'tanggal' => $attendance->tanggal->toDateString(),
         ]);
 
         return back()->with('success', 'Pengajuan pulang awal berhasil ditolak.');

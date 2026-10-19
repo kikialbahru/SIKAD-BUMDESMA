@@ -6,6 +6,7 @@ use App\Models\AttendanceSetting;
 use App\Models\Employee;
 use App\Models\Punishment;
 use App\Models\Reward;
+use App\Services\ActivityLogger;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -81,6 +82,8 @@ class RecognitionController extends Controller
             }
         });
 
+        ActivityLogger::log('punishment.auto-points', null, ['periode' => $label, 'karyawan' => $generated]);
+
         return back()->with('success', 'Poin otomatis periode '.$label.' digenerate untuk '.$generated.' karyawan.');
     }
 
@@ -103,7 +106,13 @@ class RecognitionController extends Controller
             $data['poin'] = 0;
             $data['nominal'] ??= 0;
         }
-        Reward::create($data);
+        $reward = Reward::create($data);
+
+        ActivityLogger::log('reward.create', $reward, [
+            'karyawan_id' => $reward->karyawan_id,
+            'jenis' => $reward->jenis,
+            'nominal' => $reward->nominal,
+        ]);
 
         return back()->with('success', 'Reward berhasil ditambahkan.');
     }
@@ -120,7 +129,13 @@ class RecognitionController extends Controller
         ]);
         // Kolom nominal NOT NULL: punishment tanpa nominal (mis. peringatan) disimpan 0.
         $data['nominal'] ??= 0;
-        Punishment::create($data);
+        $punishment = Punishment::create($data);
+
+        ActivityLogger::log('punishment.create', $punishment, [
+            'karyawan_id' => $punishment->karyawan_id,
+            'jenis' => $punishment->jenis,
+            'nominal' => $punishment->nominal,
+        ]);
 
         return back()->with('success', 'Punishment berhasil ditambahkan.');
     }
@@ -128,6 +143,7 @@ class RecognitionController extends Controller
     public function destroyReward(Request $request, Reward $reward)
     {
         abort_unless($request->user()->isAdmin(), 403);
+        ActivityLogger::log('reward.delete', $reward, ['karyawan_id' => $reward->karyawan_id, 'judul' => $reward->judul]);
         $reward->delete();
 
         return back()->with('success', 'Reward berhasil dihapus.');
@@ -136,6 +152,7 @@ class RecognitionController extends Controller
     public function destroyPunishment(Request $request, Punishment $punishment)
     {
         abort_unless($request->user()->isAdmin(), 403);
+        ActivityLogger::log('punishment.delete', $punishment, ['karyawan_id' => $punishment->karyawan_id, 'judul' => $punishment->judul]);
         $punishment->delete();
 
         return back()->with('success', 'Punishment berhasil dihapus.');

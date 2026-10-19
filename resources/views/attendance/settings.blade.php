@@ -51,6 +51,19 @@
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>
+                    <div class="col-sm-6">
+                        <label class="form-label" for="mulai_absen_masuk">Absen Masuk Mulai</label>
+                        <input
+                            class="form-control @error('mulai_absen_masuk') is-invalid @enderror"
+                            id="mulai_absen_masuk"
+                            type="time"
+                            name="mulai_absen_masuk"
+                            value="{{ old('mulai_absen_masuk', substr((string) ($settings->mulai_absen_masuk ?? '07:00'), 0, 5)) }}"
+                            required>
+                        @error('mulai_absen_masuk')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
                 </div>
                 <div
                     class="form-text mt-2">Karyawan
@@ -92,13 +105,28 @@
                     setelah
                     jam
                     masuk
+                    +
+                    toleransi
                     tercatat
-                    Terlambat;
-                    jumlah
+                    Terlambat
+                    (mis.
+                    jam
+                    08:00
+                    +
+                    10
                     menit
-                    aktual
-                    selalu
-                    tersimpan.</div>
+                    =
+                    telat
+                    mulai
+                    08:11);
+                    dalam
+                    batas
+                    toleransi
+                    tercatat
+                    Hadir
+                    dengan
+                    0
+                    menit.</div>
             </div>
         </div>
     </div>

@@ -230,7 +230,7 @@ return [
         'terbit' => 'status terbit',
         'toleransi_telat_menit' => 'toleransi telat',
         'token' => 'token',
-        'tunjangan_kehadiran' => 'tunjangan kehadiran',
+        'tunjangan_kehadiran' => 'tunjangan',
         'type' => 'tipe',
         'week' => 'pekan',
         'year' => 'tahun',

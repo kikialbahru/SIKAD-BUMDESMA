@@ -24,6 +24,8 @@
             <button class="btn btn-primary text-nowrap" type="submit">
                 <i class="bi bi-calculator me-2">
                 </i>Generate payroll</button>
+            <label class="form-check d-flex align-items-center gap-2 text-secondary small text-nowrap" title="Hitung ulang juga payroll yang sudah Diverifikasi/Dibayar (statusnya kembali ke Draft)">
+                <input class="form-check-input" type="checkbox" name="force" value="1"> Timpa terkunci</label>
         </form>
     @endif
 </div>
@@ -65,7 +67,8 @@
     <i class="bi bi-info-circle me-2">
     </i>Periode aktif: <strong>
         {{ $period['start']->translatedFormat('F Y') }}
-    </strong>. Generate ulang akan memperbarui simulasi periode yang sama.</div>
+    </strong>. Generate ulang akan memperbarui simulasi periode yang sama.
+    Payroll <strong>Diverifikasi/Dibayar terkunci</strong> dan dilewati kecuali opsi <strong>Timpa terkunci</strong> dicentang.</div>
 
 <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
     <a

@@ -201,7 +201,7 @@ class ReportController extends Controller
             $items = $attendances->where('karyawan_id', $employee->id);
             $present = $items->whereIn('status', ['present', 'late'])->count();
 
-            return ['employee' => $employee, 'present' => $present, 'late' => $items->where('status', 'late')->count(), 'permission' => $items->where('status', 'permission')->count(), 'leave' => $items->where('status', 'leave')->count(), 'total' => $workdays, 'percentage' => $workdays ? round($present / $workdays * 100, 1) : 0];
+            return ['employee' => $employee, 'present' => $present, 'late' => $items->where('status', 'late')->count(), 'permission' => $items->where('status', 'permission')->count(), 'leave' => $items->where('status', 'leave')->count(), 'duty' => $items->where('status', 'duty')->count(), 'total' => $workdays, 'percentage' => $workdays ? round($present / $workdays * 100, 1) : 0];
         });
     }
 
@@ -226,19 +226,19 @@ class ReportController extends Controller
 
         $sheets = [
             'attendance' => fn () => $sheet('Kehadiran', 'Laporan Kehadiran',
-                ['No', 'ID Karyawan', 'Nama', 'Jabatan', 'Hadir', 'Terlambat', 'Izin', 'Cuti', 'Total Hari', 'Persentase'],
+                ['No', 'ID Karyawan', 'Nama', 'Jabatan', 'Hadir', 'Terlambat', 'Izin', 'Cuti', 'Dinas', 'Total Hari', 'Persentase'],
                 $summary->values()->map(fn ($item, $i) => [
                     $i + 1, $item['employee']->kode_karyawan, $item['employee']->display_name,
                     $item['employee']->position?->nama ?? '-', $item['present'], $item['late'],
-                    $item['permission'], $item['leave'], $item['total'],
+                    $item['permission'], $item['leave'], $item['duty'], $item['total'],
                     $item['total'] ? round($item['present'] / $item['total'], 3) : 0,
                 ])->all(),
-                ['J' => '0.0%'], '1E5AA8', null, 'J'),
+                ['K' => '0.0%'], '1E5AA8', null, 'K'),
             'leaves' => fn () => $sheet('Cuti & Izin', 'Laporan Cuti & Izin',
                 ['No', 'ID Karyawan', 'Nama', 'Jenis', 'Mulai', 'Selesai', 'Durasi', 'Status'],
                 $leaves->values()->map(fn ($item, $i) => [
                     $i + 1, $item->employee?->kode_karyawan, $item->employee?->user?->name,
-                    $item->jenis === 'sick' ? 'Sakit' : 'Cuti',
+                    $item->jenis === 'sick' ? 'Sakit' : ($item->jenis === 'duty' ? 'Dinas Keluar' : 'Cuti'),
                     $item->tanggal_mulai->format('d/m/Y'), $item->tanggal_selesai->format('d/m/Y'),
                     $item->jumlah_hari.' hari', $this->leaveStatusLabel($item->status),
                 ])->all(),

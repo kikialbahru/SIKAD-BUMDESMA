@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Employee;
+use App\Models\LeaveQuota;
 use App\Models\LeaveRequest;
 use App\Models\User;
 use Carbon\Carbon;
@@ -43,28 +44,28 @@ class LeaveRequestRuleTest extends TestCase
         ]);
     }
 
-    public function test_leave_requires_seven_days_notice(): void
+    public function test_leave_allows_sudden_leave(): void
     {
         Carbon::setTestNow('2026-09-16 10:00:00');
         $user = $this->employeeUser();
 
-        // H+3 ditolak.
+        // Cuti dadakan hari ini (H+0) diterima.
+        $this->actingAs($user)->post(route('leave.store'), [
+            'jenis' => 'leave',
+            'tanggal_mulai' => '2026-09-16',
+            'tanggal_selesai' => '2026-09-17',
+            'alasan' => 'Urusan mendadak.',
+        ])->assertRedirect();
+        $this->assertEquals(1, LeaveRequest::count());
+
+        // Cuti H+3 juga diterima (tanpa batas H-7).
         $this->actingAs($user)->post(route('leave.store'), [
             'jenis' => 'leave',
             'tanggal_mulai' => '2026-09-19',
             'tanggal_selesai' => '2026-09-20',
             'alasan' => 'Liburan.',
-        ])->assertSessionHasErrors('tanggal_mulai');
-        $this->assertEquals(0, LeaveRequest::count());
-
-        // Tepat H+7 diterima.
-        $this->actingAs($user)->post(route('leave.store'), [
-            'jenis' => 'leave',
-            'tanggal_mulai' => '2026-09-23',
-            'tanggal_selesai' => '2026-09-24',
-            'alasan' => 'Liburan.',
         ])->assertRedirect();
-        $this->assertEquals(1, LeaveRequest::count());
+        $this->assertEquals(2, LeaveRequest::count());
     }
 
     public function test_permission_type_is_rejected(): void
@@ -191,7 +192,7 @@ class LeaveRequestRuleTest extends TestCase
         $this->assertEquals('pending', $request->fresh()->status);
     }
 
-    public function test_update_enforces_seven_day_rule_for_leave(): void
+    public function test_update_allows_sudden_leave(): void
     {
         Carbon::setTestNow('2026-09-16 10:00:00');
         $user = $this->employeeUser();
@@ -205,14 +206,14 @@ class LeaveRequestRuleTest extends TestCase
 
         $request = LeaveRequest::first();
 
-        // Ubah jenis menjadi cuti dengan tanggal mulai H+3 → ditolak.
+        // Ubah menjadi cuti dadakan H+3 → diterima.
         $this->actingAs($user)->put(route('leave.update', $request), [
             'jenis' => 'leave',
             'tanggal_mulai' => '2026-09-19',
             'tanggal_selesai' => '2026-09-20',
             'alasan' => 'Liburan.',
-        ])->assertSessionHasErrors('tanggal_mulai');
-        $this->assertEquals('sick', $request->fresh()->jenis);
+        ])->assertRedirect(route('leave.show', $request));
+        $this->assertEquals('leave', $request->fresh()->jenis);
     }
 
     public function test_owner_cannot_update_processed_request(): void
@@ -240,9 +241,96 @@ class LeaveRequestRuleTest extends TestCase
         ])->assertStatus(422);
     }
 
+    public function test_leave_max_three_consecutive_days(): void
+    {
+        Carbon::setTestNow('2026-09-16 10:00:00');
+        $user = $this->employeeUser();
+
+        // 4 hari ditolak.
+        $this->actingAs($user)->post(route('leave.store'), [
+            'jenis' => 'leave',
+            'tanggal_mulai' => '2026-09-23',
+            'tanggal_selesai' => '2026-09-26',
+            'alasan' => 'Liburan.',
+        ])->assertSessionHasErrors('tanggal_selesai');
+        $this->assertEquals(0, LeaveRequest::count());
+
+        // Tepat 3 hari diterima.
+        $this->actingAs($user)->post(route('leave.store'), [
+            'jenis' => 'leave',
+            'tanggal_mulai' => '2026-09-23',
+            'tanggal_selesai' => '2026-09-25',
+            'alasan' => 'Liburan.',
+        ])->assertRedirect();
+        $this->assertEquals(1, LeaveRequest::count());
+
+        // Sakit lebih dari 3 hari tetap boleh (aturan hanya untuk cuti).
+        $this->actingAs($user)->post(route('leave.store'), [
+            'jenis' => 'sick',
+            'tanggal_mulai' => '2026-09-23',
+            'tanggal_selesai' => '2026-09-27',
+            'alasan' => 'Rawat inap.',
+        ])->assertRedirect();
+        $this->assertEquals(2, LeaveRequest::count());
+    }
+
     protected function tearDown(): void
     {
         Carbon::setTestNow();
         parent::tearDown();
+    }
+
+    public function test_duty_needs_no_notice_and_no_three_day_cap(): void
+    {
+        Carbon::setTestNow('2026-09-16 10:00:00');
+        $user = $this->employeeUser();
+
+        // Dinas dadakan 5 hari langsung diterima.
+        $this->actingAs($user)->post(route('leave.store'), [
+            'jenis' => 'duty',
+            'tanggal_mulai' => '2026-09-16',
+            'tanggal_selesai' => '2026-09-20',
+            'alasan' => 'Penugasan luar kota.',
+        ])->assertRedirect();
+
+        $request = LeaveRequest::first();
+        $this->assertEquals('duty', $request->jenis);
+        $this->assertEquals(5, $request->jumlah_hari);
+    }
+
+    public function test_duty_approved_writes_duty_attendance_blocks_checkin_and_keeps_quota(): void
+    {
+        Carbon::setTestNow('2026-09-16 10:00:00');
+        $user = $this->employeeUser();
+        $admin = $this->adminUser();
+
+        $this->actingAs($user)->post(route('leave.store'), [
+            'jenis' => 'duty',
+            'tanggal_mulai' => '2026-09-16',
+            'tanggal_selesai' => '2026-09-17',
+            'alasan' => 'Penugasan luar kota.',
+        ])->assertRedirect();
+
+        $request = LeaveRequest::first();
+        $this->actingAs($admin)->patch(route('leave.review', $request), ['status' => 'approved'])
+            ->assertRedirect();
+
+        // Baris kehadiran tertulis duty → tidak perlu absen.
+        $this->assertDatabaseHas('kehadiran', [
+            'karyawan_id' => $user->employee->id, 'tanggal' => '2026-09-16', 'status' => 'duty',
+        ]);
+        $this->assertDatabaseHas('kehadiran', [
+            'karyawan_id' => $user->employee->id, 'tanggal' => '2026-09-17', 'status' => 'duty',
+        ]);
+
+        // Check-in pada hari dinas ditolak.
+        $this->actingAs($user)->post(route('attendance.check-in'))
+            ->assertRedirect()
+            ->assertSessionHas('error');
+
+        // Kuota cuti 12 hari tidak berkurang oleh dinas.
+        $usage = LeaveQuota::usage($user->employee->fresh(), 2026);
+        $this->assertEquals(0, $usage['used']);
+        $this->assertEquals(12, $usage['remaining']);
     }
 }

@@ -70,9 +70,16 @@
                     <div class="card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-1">
                             <h2 class="h5 mb-0">Belum absen hari ini</h2>
+                            @if ($isOffDay ?? false)
+                                <span class="badge text-bg-info">Libur</span>
+                            @else
                             <span class="badge {{ $adminStats['notCheckedIn']->isEmpty() ? 'text-bg-success' : 'text-bg-warning' }}">
                                 {{ $adminStats['notCheckedIn']->count() }} orang</span>
+                            @endif
                         </div>
+                        @if ($isOffDay ?? false)
+                            <p class="text-secondary small mb-0">Sabtu–Minggu libur, tidak perlu absen.</p>
+                        @else
                         <p class="text-secondary small mb-3">Karyawan aktif tanpa absen masuk tercatat.</p>
                         @forelse ($adminStats['notCheckedIn'] as $absent)
                             @php($wa = preg_replace('/\D/', '', $absent->telepon ?? ''))
@@ -91,6 +98,7 @@
                             <p class="text-secondary small mb-0">
                                 <i class="bi bi-check-circle me-1"></i>Semua karyawan sudah absen.</p>
                         @endforelse
+                        @endif
                     </div>
                 </div>
             </div>
@@ -127,8 +135,8 @@
                                             <small class="text-secondary">{{ $approval->employee->kode_karyawan ?? '-' }}</small>
                                         </td>
                                         <td>
-                                            <span class="badge {{ $approval->jenis === 'sick' ? 'text-bg-info' : 'text-bg-primary' }}">
-                                                {{ $approval->jenis === 'sick' ? 'Sakit' : 'Cuti' }}</span>
+                                            <span class="badge {{ $approval->jenis === 'sick' ? 'text-bg-info' : ($approval->jenis === 'duty' ? 'text-bg-success' : 'text-bg-primary') }}">
+                                                {{ $approval->jenis === 'sick' ? 'Sakit' : ($approval->jenis === 'duty' ? 'Dinas Keluar' : 'Cuti') }}</span>
                                         </td>
                                         <td>
                                             <small>{{ $approval->tanggal_mulai->translatedFormat('d M') }} – {{ $approval->tanggal_selesai->translatedFormat('d M Y') }}</small>
@@ -156,8 +164,9 @@
                             <div>
                                 <h2 class="h5 mb-1">Absensi hari ini</h2>
                                 <p class="text-secondary small mb-0">Gunakan waktu server sebagai catatan resmi.</p>
-                            </div><span
-                                class="badge {{ $attendance?->status === 'late' ? 'text-bg-warning' : ($attendance?->waktu_masuk ? 'text-bg-success' : 'text-bg-secondary') }}">{{ $attendance?->status === 'late' ? 'Terlambat' : ($attendance?->waktu_masuk ? 'Hadir' : 'Belum absen') }}</span>
+                            </div>@if ($isOffDay ?? false)<span class="badge text-bg-info">Hari libur</span>@elseif ($todayLeave ?? null)<span
+                                class="badge {{ ($todayLeave->jenis ?? '') === 'duty' ? 'text-bg-success' : 'text-bg-info' }}">{{ ($todayLeave->jenis ?? '') === 'leave' ? 'Cuti' : ((($todayLeave->jenis ?? '') === 'sick') ? 'Sakit' : 'Dinas Keluar') }}</span>@else<span
+                                class="badge {{ $attendance?->status === 'late' ? 'text-bg-warning' : ($attendance?->waktu_masuk ? 'text-bg-success' : 'text-bg-secondary') }}">{{ $attendance?->status === 'late' ? 'Terlambat' : ($attendance?->waktu_masuk ? 'Hadir' : 'Belum absen') }}</span>@endif
                         </div>
                         <div class="row g-3 mb-4">
                             <div class="col-sm-4">
@@ -211,7 +220,11 @@
                                 </div>
                             @endif
                             <div class="d-flex flex-wrap gap-2">
-                                @if (!$attendance?->waktu_masuk)
+                                @if ($isOffDay ?? false)
+                                    <span class="btn btn-light border"><i class="bi bi-emoji-smile text-primary me-2"></i>Sabtu–Minggu libur, tidak perlu absen</span>
+                                @elseif ($todayLeave ?? null)
+                                    <span class="btn btn-light border"><i class="bi bi-briefcase text-success me-2"></i>Sedang {{ ($todayLeave->jenis ?? '') === 'leave' ? 'cuti' : ((($todayLeave->jenis ?? '') === 'sick') ? 'sakit' : 'dinas keluar') }}, tidak perlu absen</span>
+                                @elseif (!$attendance?->waktu_masuk)
                                     <button class="btn btn-primary" type="button" data-bs-toggle="modal"
                                         data-bs-target="#checkInModal"><i class="bi bi-camera me-2"></i>Absen Masuk</button>
                                 @elseif(!$attendance?->waktu_pulang)
@@ -251,7 +264,13 @@
                             class="text-secondary">Keterlambatan</span><strong>{{ $lateCount }} kali</strong></div>
                     <div class="d-flex justify-content-between py-3 border-bottom"><span class="text-secondary">Cuti
                             disetujui</span><strong>{{ $leaveCount }} pengajuan</strong></div>
-                    <div class="d-flex justify-content-between py-3"><span class="text-secondary">Kunjungan hari ini{{ auth()->user()->isAdmin() ? ' (semua karyawan)' : '' }}</span><strong>{{ $visitCount ?? 0 }} kunjungan</strong></div><a
+                    <div class="d-flex justify-content-between py-3"><span class="text-secondary">Kunjungan hari ini{{ auth()->user()->isAdmin() ? ' (semua karyawan)' : '' }}</span><strong>{{ $visitCount ?? 0 }} kunjungan</strong></div>
+                    @unless(auth()->user()->isAdmin())
+                        <div class="mt-2 mb-1">
+                            <small class="text-secondary d-block mb-2">Grafik bulan ini</small>
+                            <div style="height:180px"><canvas id="employeeChart"></canvas></div>
+                        </div>
+                    @endunless<a
                         href="{{ route('leave.index') }}" class="btn btn-outline-primary w-100 mt-3">Lihat cuti & izin</a>
                     @if(auth()->user()->isAdmin())
                         <a href="{{ route('visits.index') }}" class="btn btn-primary w-100 mt-2">Lihat kunjungan</a>
@@ -264,8 +283,8 @@
     </div>
     @include('attendance.capture-modals')
 @push('scripts')
-@if ($adminStats)
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+@if ($adminStats)
 <script>
     (() => {
         const canvas = document.querySelector('#attendanceChart');
@@ -290,5 +309,33 @@
     })();
 </script>
 @endif
+@unless(auth()->user()->isAdmin())
+<script>
+    (() => {
+        const canvas = document.querySelector('#employeeChart');
+        if (!canvas || typeof Chart === 'undefined') return;
+        const onTime = Math.max(0, {{ (int) ($presentCount ?? 0) }} - {{ (int) ($lateCount ?? 0) }});
+        const late = {{ (int) ($lateCount ?? 0) }};
+        const leave = {{ (int) ($leaveCount ?? 0) }};
+        if (onTime + late + leave === 0) {
+            canvas.parentElement.innerHTML = '<p class="text-secondary small mb-0"><i class="bi bi-info-circle me-1"></i>Belum ada data bulan ini.</p>';
+            return;
+        }
+        new Chart(canvas, {
+            type: 'doughnut',
+            data: {
+                labels: ['Tepat waktu', 'Terlambat', 'Cuti disetujui'],
+                datasets: [{ data: [onTime, late, leave], backgroundColor: ['#106fae', '#f5c34d', '#20c997'], borderWidth: 2, borderColor: '#fff' }],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '62%',
+                plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } },
+            },
+        });
+    })();
+</script>
+@endunless
 @endpush
 @endsection

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Attendance;
 use App\Models\Employee;
+use App\Services\ActivityLogger;
 use App\Services\CheckoutPolicy;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -24,7 +25,13 @@ class AttendanceCorrectionController extends Controller
     {
         $data = $this->validated($request);
 
-        Attendance::create($this->attributes($data));
+        $attendance = Attendance::create($this->attributes($data));
+
+        ActivityLogger::log('koreksi.create', $attendance, [
+            'karyawan_id' => $attendance->karyawan_id,
+            'tanggal' => $attendance->tanggal->toDateString(),
+            'status' => $attendance->status,
+        ]);
 
         return redirect()->route('attendance.index')->with('success', 'Absensi manual berhasil dicatat.');
     }
@@ -51,6 +58,12 @@ class AttendanceCorrectionController extends Controller
 
         $attendance->update($attributes);
 
+        ActivityLogger::log('koreksi.update', $attendance, [
+            'karyawan_id' => $attendance->karyawan_id,
+            'tanggal' => $attendance->tanggal->toDateString(),
+            'status' => $attendance->status,
+        ]);
+
         return redirect()->route('attendance.index')->with('success', 'Koreksi absensi berhasil disimpan.');
     }
 
@@ -67,7 +80,7 @@ class AttendanceCorrectionController extends Controller
 
         if ($checkInAt) {
             $times = CheckoutPolicy::workTimes($employee, $checkInAt);
-            $lateMinutes = max(0, $times['start']->diffInMinutes($checkInAt, false));
+            $lateMinutes = CheckoutPolicy::lateMinutes($times['start'], $checkInAt, $times['tolerance']);
 
             return [
                 'karyawan_id' => $employee->id,
@@ -102,7 +115,7 @@ class AttendanceCorrectionController extends Controller
             'tanggal' => ['required', 'date', 'before_or_equal:today', Rule::unique('kehadiran', 'tanggal')->where(fn ($query) => $query->where('karyawan_id', $request->input('karyawan_id')))->ignore($attendance?->id)],
             'jam_masuk' => ['nullable', 'date_format:H:i', 'required_with:jam_pulang'],
             'jam_pulang' => ['nullable', 'date_format:H:i', 'after:jam_masuk'],
-            'status' => ['required', 'in:present,late,leave,permission,sick,absent'],
+            'status' => ['required', 'in:present,late,leave,permission,sick,duty,absent'],
             'catatan' => ['nullable', 'string', 'max:500'],
         ], [
             'tanggal.unique' => 'Karyawan ini sudah memiliki data absensi pada tanggal tersebut — gunakan tombol koreksi (ikon pensil).',
@@ -111,7 +124,7 @@ class AttendanceCorrectionController extends Controller
 
         if (empty($data['jam_masuk']) && in_array($data['status'], ['present', 'late'], true)) {
             throw ValidationException::withMessages([
-                'jam_masuk' => 'Isi jam masuk, atau pilih status Cuti/Izin/Sakit/Alpa bila karyawan tidak hadir.',
+                'jam_masuk' => 'Isi jam masuk, atau pilih status Cuti/Izin/Sakit/Dinas/Alpa bila karyawan tidak hadir.',
             ]);
         }
 

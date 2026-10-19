@@ -55,7 +55,7 @@
     <div class="col-md-6">
         <label class="form-label" for="cor_status">Status</label>
         <select class="form-select @error('status') is-invalid @enderror" id="cor_status" name="status" required>
-            @foreach(['present' => 'Hadir', 'late' => 'Terlambat', 'leave' => 'Cuti', 'sick' => 'Sakit', 'absent' => 'Alpa'] as $value => $label)
+            @foreach(['present' => 'Hadir', 'late' => 'Terlambat', 'leave' => 'Cuti', 'sick' => 'Sakit', 'duty' => 'Dinas Keluar', 'absent' => 'Alpa'] as $value => $label)
                 <option value="{{ $value }}" @selected(old('status', $attendance->status ?? 'present') === $value)>
                     {{ $label }}
                 </option>
@@ -81,7 +81,7 @@
             kedua
             jam
             untuk
-            Cuti/Izin/Sakit/Alpa.</div>
+            Cuti/Izin/Sakit/Dinas/Alpa.</div>
     </div>
     <div class="col-md-6">
         <label class="form-label" for="cor_note">Keterangan koreksi</label>

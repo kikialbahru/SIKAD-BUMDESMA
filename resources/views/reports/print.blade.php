@@ -165,7 +165,7 @@
 <body>
     @php
         $pill = fn($bg, $fg) => "background:#{$bg};color:#{$fg};";
-        $leaveType = fn($t) => $t === 'sick' ? 'Sakit' : 'Cuti';
+        $leaveType = fn($t) => $t === 'sick' ? 'Sakit' : ($t === 'duty' ? 'Dinas Keluar' : 'Cuti');
         $leaveStatus = fn($s) => match ($s) {
             'approved' => ['Disetujui', 'D1FAE5', '065F46'],
             'rejected' => ['Ditolak', 'FEE2E2', '991B1B'],
@@ -207,6 +207,7 @@
                     <th class="num">Terlambat</th>
                     <th class="num">Izin</th>
                     <th class="num">Cuti</th>
+                    <th class="num">Dinas</th>
                     <th class="num">Total Hari</th>
                     <th class="num">Persentase</th>
                 </tr>
@@ -223,12 +224,13 @@
                         <td class="num">{{ $item['late'] }}</td>
                         <td class="num">{{ $item['permission'] }}</td>
                         <td class="num">{{ $item['leave'] }}</td>
+                        <td class="num">{{ $item['duty'] ?? 0 }}</td>
                         <td class="num">{{ $item['total'] }}</td>
                         <td class="num"><span class="pill" style="{{ $pill($pbg, $pfg) }}">{{ $item['percentage'] }}%</span></td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="10" class="center" style="color:#64748b;padding:16px">Tidak ada data pada periode ini.</td>
+                        <td colspan="11" class="center" style="color:#64748b;padding:16px">Tidak ada data pada periode ini.</td>
                     </tr>
                 @endforelse
             </tbody>

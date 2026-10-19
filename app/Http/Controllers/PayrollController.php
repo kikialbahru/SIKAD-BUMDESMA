@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Employee;
 use App\Models\Holiday;
 use App\Models\Payroll;
+use App\Services\ActivityLogger;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
@@ -38,12 +39,26 @@ class PayrollController extends Controller
         $data = $request->validate([
             'period' => ['required', 'date_format:Y-m'],
             'karyawan_id' => ['nullable', 'exists:karyawan,id'],
+            'force' => ['nullable', 'boolean'],
         ]);
         $period = $this->period($data['period']);
+        $force = (bool) ($data['force'] ?? false);
         $employees = Employee::with('attendances', 'rewards', 'punishments', 'salaryComponents')->where('aktif', true)->when($data['karyawan_id'] ?? null, fn ($query, $id) => $query->whereKey($id))->get();
+        $skipped = 0;
 
-        DB::transaction(function () use ($employees, $period) {
+        DB::transaction(function () use ($employees, $period, $force, &$skipped) {
             foreach ($employees as $employee) {
+                // Payroll yang sudah diverifikasi/dibayar terkunci agar tidak tertimpa
+                // generate ulang secara diam-diam — kecuali admin mencentang Timpa.
+                $existing = Payroll::where('karyawan_id', $employee->id)
+                    ->whereDate('periode_mulai', $period['start'])
+                    ->whereDate('periode_selesai', $period['end'])
+                    ->first();
+                if ($existing && $existing->status !== 'draft' && ! $force) {
+                    $skipped++;
+
+                    continue;
+                }
                 $attendance = $employee->attendances->filter(fn ($item) => $item->tanggal->betweenIncluded($period['start'], $period['end']));
                 $rewards = $employee->rewards->filter(fn ($item) => $item->diberikan_pada->betweenIncluded($period['start'], $period['end']));
                 $punishments = $employee->punishments->filter(fn ($item) => $item->dijatuhkan_pada->betweenIncluded($period['start'], $period['end']));
@@ -51,7 +66,7 @@ class PayrollController extends Controller
                 $lateRate = (float) ($activeRates->firstWhere('jenis', 'late_deduction')?->nominal ?? 1000);
                 $absenceRate = (float) ($activeRates->firstWhere('jenis', 'absence_deduction')?->nominal ?? 0);
                 $lateDeduction = $attendance->sum('menit_telat') * $lateRate;
-                $absenceDays = max(0, $this->workdays($period['start'], $period['end']) - $attendance->whereIn('status', ['present', 'late', 'leave', 'permission', 'sick'])->count());
+                $absenceDays = max(0, $this->workdays($period['start'], $period['end']) - $attendance->whereIn('status', ['present', 'late', 'leave', 'permission', 'sick', 'duty'])->count());
                 $absenceDeduction = $absenceDays * $absenceRate;
                 $rewardTotal = $rewards->sum('nominal');
                 $punishmentTotal = $punishments->sum('nominal');
@@ -69,13 +84,37 @@ class PayrollController extends Controller
             }
         });
 
-        return back()->with('success', 'Penggajian periode '.$data['period'].' berhasil dibuat.');
+        ActivityLogger::log('payroll.generate', null, [
+            'periode' => $data['period'],
+            'karyawan_id' => $data['karyawan_id'] ?? 'semua',
+            'timpa_terkunci' => $force,
+            'dilewati_terkunci' => $skipped,
+        ]);
+
+        $message = 'Penggajian periode '.$data['period'].' berhasil dibuat.';
+        if ($skipped > 0) {
+            $message .= ' '.$skipped.' data dilewati karena sudah diverifikasi/dibayar — centang "Timpa" bila memang ingin menghitung ulang.';
+        }
+
+        return back()->with('success', $message);
     }
 
     public function updateStatus(Request $request, Payroll $payroll)
     {
         $data = $request->validate(['status' => ['required', 'in:draft,verified,paid']]);
+        // Uang sudah keluar tidak boleh diam-diam kembali jadi draft;
+        // lewat verified dulu agar jejak audit jelas.
+        if ($payroll->status === 'paid' && $data['status'] === 'draft') {
+            return back()->with('error', 'Payroll yang sudah dibayar tidak dapat langsung dikembalikan ke draft. Ubah ke Verified terlebih dahulu bila ada koreksi.');
+        }
+        $from = $payroll->status;
         $payroll->update($data);
+
+        ActivityLogger::log('payroll.status', $payroll, [
+            'dari' => $from,
+            'ke' => $data['status'],
+            'karyawan_id' => $payroll->karyawan_id,
+        ]);
 
         return back()->with('success', 'Status payroll berhasil diperbarui.');
     }
@@ -123,7 +162,7 @@ class PayrollController extends Controller
             ? $payroll->employee->attendances()->whereBetween('tanggal', [$start, $end])->orderBy('tanggal')->get()
             : collect();
         $lateMinutes = (int) $attendances->sum('menit_telat');
-        $counted = $attendances->whereIn('status', ['present', 'late', 'leave', 'permission', 'sick'])->count();
+        $counted = $attendances->whereIn('status', ['present', 'late', 'leave', 'permission', 'sick', 'duty'])->count();
         $absenceDays = max(0, $this->workdays($start->copy()->startOfDay(), $end->copy()->startOfDay()) - $counted);
 
         $rates = $payroll->employee?->salaryComponents->where('aktif', true) ?? collect();

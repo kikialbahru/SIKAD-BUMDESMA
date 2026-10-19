@@ -44,7 +44,7 @@
     <div class="section">Penerimaan</div>
     <table>
         <tr><td>Gaji pokok</td><td class="num">Rp {{ number_format($payroll->gaji_pokok, 0, ',', '.') }}</td></tr>
-        <tr><td>Tunjangan kehadiran</td><td class="num">Rp {{ number_format($payroll->tunjangan_kehadiran, 0, ',', '.') }}</td></tr>
+        <tr><td>Tunjangan</td><td class="num">Rp {{ number_format($payroll->tunjangan_kehadiran, 0, ',', '.') }}</td></tr>
         @forelse($rewards as $reward)
             <tr><td>Reward — {{ $reward->judul }} ({{ $reward->diberikan_pada?->format('d M Y') }})</td><td class="num">Rp {{ number_format($reward->nominal, 0, ',', '.') }}</td></tr>
         @empty

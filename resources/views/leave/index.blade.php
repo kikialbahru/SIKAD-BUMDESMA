@@ -3,8 +3,8 @@
 @section('content')
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
     <div>
-        <h1 class="h3 mb-1">Cuti & Sakit</h1>
-        <p class="text-secondary mb-0">Kelola pengajuan, persetujuan, dan riwayat cuti serta sakit karyawan.</p>
+        <h1 class="h3 mb-1">Cuti, Sakit & Dinas Keluar</h1>
+        <p class="text-secondary mb-0">Kelola pengajuan, persetujuan, dan riwayat cuti, sakit, serta dinas keluar karyawan.</p>
     </div>
     @unless(auth()->user()->isAdmin())
         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#leaveModal">
@@ -92,6 +92,7 @@
                     <option value="">Semua Jenis</option>
                     <option value="leave" @selected(($filters['jenis'] ?? '') === 'leave')>Cuti</option>
                     <option value="sick" @selected(($filters['jenis'] ?? '') === 'sick')>Sakit</option>
+                    <option value="duty" @selected(($filters['jenis'] ?? '') === 'duty')>Dinas Keluar</option>
                 </select>
             </div>
             <div class="col-6 col-md-2">
@@ -176,6 +177,8 @@
                                 <span class="badge text-bg-primary">Cuti</span>
                             @elseif($item->jenis === 'permission')
                                 <span class="badge text-bg-warning">Izin</span>
+                            @elseif($item->jenis === 'duty')
+                                <span class="badge text-bg-success">Dinas Keluar</span>
                             @else
                                 <span class="badge text-bg-info">Sakit</span>
                             @endif
@@ -241,6 +244,7 @@
                     <select class="form-select mb-3" name="jenis" required>
                         <option value="leave">Cuti</option>
                         <option value="sick">Sakit</option>
+                        <option value="duty">Dinas Keluar</option>
                     </select>
                     <div class="row g-3 mb-3">
                         <div class="col-6">
@@ -255,13 +259,9 @@
                     <div
                         class="form-text mb-3">Pengajuan
                         <strong>cuti</strong>
-                        minimal
-                        1
-                        minggu
-                        (7 hari)
-                        sebelum
-                        tanggal
-                        mulai.</div>
+                        dapat dilakukan mendadak (tanpa batas H-7),
+                        maksimal 3 hari berturut-turut. Kuota 12 hari/tahun.
+                        <strong>Dinas keluar</strong> tidak memotong kuota dan tidak perlu absen.</div>
                     <label class="form-label">Alasan</label>
                     <textarea class="form-control mb-3" name="alasan" rows="3" required>
                     </textarea>

@@ -177,18 +177,35 @@
             q('camera-hint').innerHTML = '<span class="text-secondary">Menyiapkan kamera...</span>';
             q('btn-capture').disabled = true;
             stopCamera();
+            // iOS/Safari dan Chrome Android mewajibkan HTTPS untuk kamera & GPS.
+            // Abaikan untuk localhost saat pengembangan lokal.
+            const host = window.location.hostname;
+            const isLocal = host === 'localhost' || host === '127.0.0.1' || host === '[::1]';
+            if (window.location.protocol !== 'https:' && !isLocal) {
+                q('camera-hint').innerHTML = '<span class="text-danger">Kamera diblokir karena situs tidak memakai HTTPS. Buka situs dengan <strong>https://</strong> lalu tekan Coba Lagi Kamera.</span>';
+                return;
+            }
             if (!navigator.mediaDevices?.getUserMedia) {
-                q('camera-hint').innerHTML = '<span class="text-danger">Perangkat tidak mendukung kamera — absensi lewat foto tidak dapat dilakukan dari perangkat ini.</span>';
+                q('camera-hint').innerHTML = '<span class="text-danger">Perangkat/browser tidak mendukung kamera (butuh Chrome/Safari terbaru) — absensi lewat foto tidak dapat dilakukan dari perangkat ini.</span>';
                 return;
             }
             try {
-                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
                 video.srcObject = stream;
                 await video.play();
                 q('camera-hint').innerHTML = '<span class="text-success">🟢 Kamera siap — posisikan wajah lalu tekan AMBIL FOTO.</span>';
                 q('btn-capture').disabled = false;
             } catch (e) {
-                q('camera-hint').innerHTML = '<span class="text-danger">Kamera diperlukan untuk mengambil foto absensi. Silakan izinkan akses kamera lalu tekan Coba Lagi Kamera.</span>';
+                const name = e && e.name ? e.name : '';
+                let msg = 'Kamera diperlukan untuk mengambil foto absensi. Silakan izinkan akses kamera lalu tekan Coba Lagi Kamera.';
+                if (name === 'NotAllowedError' || name === 'SecurityError') {
+                    msg = 'Izin kamera ditolak. Ketuk ikon 🔒/ⓘ di address bar browser → izinkan Kamera → tekan Coba Lagi Kamera.';
+                } else if (name === 'NotFoundError' || name === 'OverconstrainedError') {
+                    msg = 'Tidak ada kamera depan yang ditemukan di perangkat ini. Coba dengan HP/laptop lain yang berkamera.';
+                } else if (name === 'NotReadableError' || name === 'TrackStartError') {
+                    msg = 'Kamera sedang dipakai aplikasi lain (mis. Zoom/Meet). Tutup aplikasi tersebut lalu tekan Coba Lagi Kamera.';
+                }
+                q('camera-hint').innerHTML = '<span class="text-danger">' + msg + '</span>';
             }
         }
 
@@ -216,10 +233,15 @@
                 status.innerHTML = '<span class="text-success fw-semibold">🟢 Lokasi ditemukan</span>' + extra;
                 detail.textContent = 'Akurasi ±' + coords.acc + ' meter · ' + coords.lat.toFixed(6) + ', ' + coords.lng.toFixed(6);
             }, function (err) {
-                status.innerHTML = '<span class="text-danger">Lokasi diperlukan untuk melakukan absensi. Silakan izinkan akses lokasi dan pastikan GPS aktif.</span>'
-                    + (err && err.code === err.TIMEOUT ? ' <button type="button" class="btn btn-sm btn-outline-primary ms-2" data-role="btn-gps-retry">Coba Lagi</button>' : '');
-                const retry = modal.querySelector('[data-role="btn-gps-retry"]');
-                retry?.addEventListener('click', requestGps);
+                let hint = 'Lokasi diperlukan untuk melakukan absensi. Pastikan GPS aktif dan izin lokasi diizinkan.';
+                if (err && err.code === 1) {
+                    hint = 'Izin lokasi ditolak. Ketuk ikon 🔒/ⓘ di address bar → izinkan Lokasi → tekan Perbarui Lokasi.';
+                } else if (err && err.code === 2) {
+                    hint = 'Sinyal GPS tidak tersedia (di dalam gedung?). Dekatkan ke jendela/luar ruangan lalu tekan Perbarui Lokasi.';
+                } else if (err && err.code === 3) {
+                    hint = 'Pengambilan lokasi kehabisan waktu. Pastikan GPS aktif lalu tekan Perbarui Lokasi.';
+                }
+                status.innerHTML = '<span class="text-danger">' + hint + '</span>';
             }, { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 });
         }
 

@@ -229,14 +229,14 @@
                         <tr>
                             @if(auth()->user()->isAdmin())
                                 <td>
-                                    <strong>{{ $visit->employee?->user?->name ?? '-' }}</strong>
+                                    <strong class="d-block text-break">{{ $visit->employee?->user?->name ?? '-' }}</strong>
                                     <small class="d-block text-secondary">{{ $visit->employee?->kode_karyawan }}</small>
                                 </td>
                             @endif
-                            <td>
-                                <strong>{{ $visit->judul }}</strong>
+                            <td style="min-width:200px;max-width:340px">
+                                <strong class="d-block text-break" title="{{ $visit->judul }}">{{ \Illuminate\Support\Str::limit($visit->judul, 70) }}</strong>
                                 @if($visit->deskripsi)
-                                    <small class="d-block text-secondary">{{ \Illuminate\Support\Str::limit($visit->deskripsi, 80) }}</small>
+                                    <small class="d-block text-secondary text-break">{{ \Illuminate\Support\Str::limit($visit->deskripsi, 80) }}</small>
                                 @endif
                             </td>
                             <td>{{ $visit->tanggal->translatedFormat('d M Y') }}</td>
@@ -294,7 +294,10 @@
         color: #123b72;
         font-size: .7rem;
         font-weight: 600;
+        max-width: 160px;
+        overflow: hidden;
         padding: .1rem .35rem;
+        text-overflow: ellipsis;
         white-space: nowrap;
     }
 </style>

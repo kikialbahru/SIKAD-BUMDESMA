@@ -93,7 +93,7 @@
                                     @error('foto')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
-                                    <div class="form-text">JPG/PNG/WebP, maks 2 MB.</div>
+                                    <div class="form-text">JPG/PNG/WebP, maks 20 MB.</div>
                                 </div>
                                 <div class="col-12">
                                     <label class="form-label small">Lokasi kunjungan (GPS)</label>
@@ -106,6 +106,7 @@
                                         <button class="btn btn-sm btn-outline-primary mt-2" type="button" data-role="btn-gps">
                                             <i class="bi bi-crosshair me-1"></i>Ambil Lokasi Saat Ini
                                         </button>
+                                        <div class="form-text">Sistem menunggu hingga 30 detik untuk mendapat titik GPS paling akurat. Tetap di tempat, tidak perlu berpindah. Untuk hasil terbaik, gunakan HP dan pilih izin lokasi <strong>Presisi/Tepat</strong> (bukan Perkiraan).</div>
                                     </div>
                                     <input type="hidden" name="lintang" data-role="input-lat" value="{{ old('lintang') }}">
                                     <input type="hidden" name="bujur" data-role="input-lng" value="{{ old('bujur') }}">
@@ -199,7 +200,7 @@
         <div class="card-body">
             @if($mapPoints->isNotEmpty())
                 <div id="visitsMap" style="height:380px;border-radius:.9rem;z-index:0"></div>
-                <p class="text-secondary small mb-0 mt-2">Menampilkan {{ $mapPoints->count() }} titik kunjungan berkoordinat pada filter bulan ini. Klik pin untuk detail.</p>
+                <p class="text-secondary small mb-0 mt-2">Menampilkan {{ $mapPoints->count() }} titik kunjungan berkoordinat pada filter bulan ini. Judul tiap titik tampil di peta; klik pin untuk detail.</p>
             @elseif(auth()->user()->isAdmin() && empty($filters['karyawan_id']))
                 <div class="alert alert-info mb-0">Lokasi kunjungan bersifat per karyawan — pilih satu karyawan pada filter untuk melihat peta sebarannya.</div>
             @else
@@ -284,6 +285,19 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 @if($mapPoints->isNotEmpty())
+<style>
+    .map-point-label {
+        background: rgba(255, 255, 255, .96);
+        border: 1px solid #cfd8e3;
+        border-radius: .4rem;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, .12);
+        color: #123b72;
+        font-size: .7rem;
+        font-weight: 600;
+        padding: .1rem .35rem;
+        white-space: nowrap;
+    }
+</style>
 <script>
 (function () {
     const points = @json($mapPoints);
@@ -292,8 +306,17 @@
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(map);
     const bounds = [];
     points.forEach((p) => {
+        const label = p.title.length > 36 ? p.title.slice(0, 36) + '...' : p.title;
         L.marker([p.lat, p.lng]).addTo(map)
-            .bindPopup('<strong>' + esc(p.title) + '</strong><br><small>' + esc(p.employee) + ' · ' + esc(p.date) + '</small><br><a href="' + esc(p.url) + '">Lihat detail</a>');
+            .bindTooltip(esc(label), {
+                permanent: true,
+                direction: 'top',
+                offset: [0, -12],
+                opacity: 1,
+                className: 'map-point-label',
+                interactive: false,
+            })
+            .bindPopup('<strong>' + esc(p.title) + '</strong><br><small>' + esc(p.employee) + ' A� ' + esc(p.date) + '</small><br><a href="' + esc(p.url) + '">Lihat detail</a>');
         bounds.push([p.lat, p.lng]);
     });
     if (bounds.length > 1) map.fitBounds(bounds, { padding: [40, 40] });
@@ -327,24 +350,96 @@
         setTimeout(() => map.invalidateSize(), 200);
     }
 
-    function fetchLocation(onDone) {
+    // Ambil beberapa bacaan GPS lalu pilih yang paling akurat. Satu bacaan
+    // sering masih kasar (±20 m) atau gagal saat GPS baru menyala.
+    const TARGET_ACCURACY = 10; // meter
+    const MAX_WAIT_MS = 30000;
+    let watchId = null, waitTimer = null, active = false, best = null, onDone = null;
+
+    function stopWatch() {
+        if (watchId !== null && navigator.geolocation) navigator.geolocation.clearWatch(watchId);
+        watchId = null;
+        if (waitTimer !== null) clearTimeout(waitTimer);
+        waitTimer = null;
+        active = false;
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-crosshair me-1"></i>Ambil Lokasi Saat Ini';
+    }
+
+    function accuracyBadge(acc) {
+        if (acc <= TARGET_ACCURACY) return '<span class="badge text-bg-success">Akurasi tinggi ±' + acc + ' m</span>';
+        if (acc <= 30) return '<span class="badge text-bg-info">Akurasi baik ±' + acc + ' m</span>';
+        if (acc <= 100) return '<span class="badge text-bg-warning">Akurasi sedang ±' + acc + ' m</span>';
+        return '<span class="badge text-bg-warning">Akurasi terbatas ±' + acc + ' m</span>';
+    }
+
+    function finish() {
+        if (!active) return;
+        const callback = onDone;
+        stopWatch();
+        onDone = null;
+        if (!best) {
+            statusEl.innerHTML = '<span class="text-danger">Gagal mendapatkan lokasi. Pastikan GPS aktif dan izin lokasi diizinkan, lalu tekan Ambil Lokasi lagi.</span>';
+            return;
+        }
+        const hint = best.acc > 30
+            ? ' Lokasi tetap bisa disimpan. Jika ingin lebih akurat, aktifkan izin Lokasi Presisi/Tepat di browser/HP lalu tekan Ambil Lokasi lagi.'
+            : ' Lokasi sudah cukup akurat dan siap disimpan.';
+        detailEl.innerHTML = Number(best.lat).toFixed(6) + ', ' + Number(best.lng).toFixed(6) + ' (±' + best.acc + ' m)' + '<span class="d-block text-secondary">' + hint + '</span>';
+        if (callback) callback();
+    }
+
+    function fetchLocation(callback) {
+        if (active) {
+            if (callback) onDone = callback;
+            return;
+        }
+        if (!window.isSecureContext) {
+            statusEl.innerHTML = '<span class="text-danger">Lokasi hanya bisa diambil melalui HTTPS. Buka aplikasi dengan <strong>https://</strong> lalu coba lagi.</span>';
+            detailEl.textContent = '';
+            return;
+        }
         if (!navigator.geolocation) {
             statusEl.innerHTML = '<span class="text-danger">Perangkat tidak mendukung GPS.</span>';
             return;
         }
-        statusEl.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span><span class="text-secondary">Mengambil lokasi...</span>';
-        navigator.geolocation.getCurrentPosition(
+
+        active = true;
+        best = null;
+        onDone = callback || null;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Mengambil lokasi...';
+        statusEl.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span><span class="text-secondary">Mencari sinyal GPS terbaik... tetap di tempat.</span>';
+        detailEl.textContent = 'Bacaan awal biasanya masih kasar; akurasi membaik dalam beberapa detik.';
+
+        watchId = navigator.geolocation.watchPosition(
             (pos) => {
-                const lat = pos.coords.latitude, lng = pos.coords.longitude, acc = pos.coords.accuracy;
-                latInput.value = lat; lngInput.value = lng; accInput.value = Math.round(acc);
-                statusEl.innerHTML = '<span class="badge text-bg-success"><i class="bi bi-geo-alt me-1"></i>Lokasi terkunci</span>';
-                detailEl.textContent = Number(lat).toFixed(6) + ', ' + Number(lng).toFixed(6) + ' (±' + Math.round(acc) + ' m)';
-                showPreview(lat, lng);
-                if (onDone) onDone();
+                const lat = pos.coords.latitude, lng = pos.coords.longitude;
+                const acc = Math.max(0, Math.round(pos.coords.accuracy || 0));
+                if (!best || acc < best.acc) {
+                    best = { lat: lat, lng: lng, acc: acc };
+                    latInput.value = lat; lngInput.value = lng; accInput.value = acc;
+                    statusEl.innerHTML = '<span class="text-success fw-semibold">🟢 Lokasi ditemukan</span> ' + accuracyBadge(acc);
+                    const status = acc <= TARGET_ACCURACY
+                        ? 'Akurasi sudah bagus.'
+                        : (acc <= 30 ? 'Akurasi baik; menunggu bacaan yang lebih baik...' : 'Masih mencari titik yang lebih akurat... tetap di tempat.');
+                    detailEl.innerHTML = Number(lat).toFixed(6) + ', ' + Number(lng).toFixed(6) + ' (±' + acc + ' m)' + '<span class="d-block text-secondary">' + status + '</span>';
+                    showPreview(lat, lng);
+                }
+                if (acc <= TARGET_ACCURACY) finish();
             },
-            () => { statusEl.innerHTML = '<span class="text-danger">Gagal mengambil lokasi. Pastikan izin lokasi diaktifkan lalu coba lagi.</span>'; },
-            { enableHighAccuracy: true, timeout: 15000 }
+            (err) => {
+                if (best) return;
+                let hint = 'Gagal mengambil lokasi. Pastikan GPS aktif dan izin lokasi diizinkan lalu coba lagi.';
+                if (err && err.code === 1) hint = 'Izin lokasi ditolak. Izinkan akses Lokasi pada browser lalu tekan Ambil Lokasi lagi.';
+                else if (err && err.code === 2) hint = 'Sinyal GPS belum tersedia. Tetap di tempat beberapa saat lalu tekan Ambil Lokasi lagi.';
+                else if (err && err.code === 3) hint = 'Pengambilan lokasi melebihi waktu tunggu. Tekan Ambil Lokasi lagi.';
+                statusEl.innerHTML = '<span class="text-danger">' + hint + '</span>';
+            },
+            { enableHighAccuracy: true, timeout: 30000, maximumAge: 0 }
         );
+
+        waitTimer = setTimeout(finish, MAX_WAIT_MS);
     }
 
     btn.addEventListener('click', () => fetchLocation());
@@ -352,6 +447,8 @@
         if (!latInput.value || !lngInput.value) {
             e.preventDefault();
             fetchLocation(() => form.submit());
+        } else if (active) {
+            finish();
         }
     });
 })();

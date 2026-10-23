@@ -16,7 +16,11 @@ class AuthController extends Controller
 
     public function store(Request $request)
     {
-        $credentials = $request->validate(['email' => ['required', 'email'], 'password' => ['required', 'string']]);
+        $credentials = $request->validate([
+            'email' => ['required', 'email'],
+            'password' => ['required', 'string'],
+            'captcha' => ['required', 'string', 'max:10'],
+        ]);
 
         $throttleKey = 'login:'.Str::lower($credentials['email']).'|'.$request->ip();
         if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
@@ -24,6 +28,14 @@ class AuthController extends Controller
 
             return back()->withErrors(['email' => 'Terlalu banyak percobaan login. Silakan coba lagi dalam '.$seconds.' detik.'])->onlyInput('email');
         }
+
+        if (! CaptchaController::matches($request, $credentials['captcha'])) {
+            RateLimiter::hit($throttleKey, 60);
+
+            return back()->withErrors(['captcha' => 'Kode verifikasi captcha tidak sesuai atau sudah kedaluwarsa.'])->onlyInput('email');
+        }
+
+        unset($credentials['captcha']);
 
         if (! Auth::attempt($credentials, $request->boolean('remember'))) {
             RateLimiter::hit($throttleKey, 60);

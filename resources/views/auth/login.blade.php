@@ -57,7 +57,7 @@
 								<span class="brand-fallback">BT</span>
 							@endif
 							<h1 class="h4 fw-bold mt-3 mb-1">BUMDESMA LKD TARUB</h1>
-							<p class="mb-1 fw-semibold" style="color: var(--gold);">Sistem Informasi Karyawan</p>
+							<p class="mb-1 fw-semibold" style="color: var(--gold);">Sistem Informasi Kehadiran</p>
 							<p class="small mb-4 opacity-75">Kelola kehadiran, cuti, penggajian, dan apresiasi dalam satu pintu.</p>
 						</div>
 						<div class="d-grid gap-2">
@@ -124,6 +124,45 @@
 									</button>
 								</div>
 							</div>
+							<div class="mb-3">
+								<label class="form-label fw-semibold small" for="captcha">Verifikasi Captcha</label>
+								<div class="d-flex gap-2">
+									<div class="input-group input-group-lg">
+										<span class="input-group-text">
+										    <i class="bi bi-shield-check">
+										    </i>
+										</span>
+										<input
+										    class="form-control @error('captcha') is-invalid @enderror"
+										    id="captcha"
+										    name="captcha"
+										    type="text"
+										    placeholder="Kode captcha"
+										    required
+										    autocomplete="off"
+										    autocapitalize="characters"
+										    spellcheck="false"
+										    maxlength="10"
+										    style="text-transform: uppercase;">
+									</div>
+									<img
+									    id="captchaImage"
+									    class="border rounded"
+									    src="{{ route('captcha') }}?t={{ time() }}"
+									    alt="Kode captcha"
+									    title="Klik untuk ganti kode"
+									    width="148"
+									    height="48"
+									    style="object-fit: cover; cursor: pointer; flex-shrink: 0;">
+								</div>
+								<div class="d-flex justify-content-between align-items-center mt-1">
+									<span class="text-secondary" style="font-size: .75rem;">
+									    <i class="bi bi-arrow-repeat me-1">
+									    </i>Klik gambar untuk mengganti kode
+									</span>
+									<button class="btn btn-link btn-sm p-0 text-decoration-none" type="button" id="refreshCaptcha">Ganti kode</button>
+								</div>
+							</div>
 							<div class="d-flex justify-content-between align-items-center mb-4">
 								<div class="form-check">
 								    <input class="form-check-input" id="remember" name="remember" type="checkbox">
@@ -159,6 +198,15 @@
 			input.type = show ? 'text' : 'password';
 			icon.className = show ? 'bi bi-eye-slash' : 'bi bi-eye';
 		});
+
+		function refreshCaptcha() {
+			const img = document.getElementById('captchaImage');
+			if (!img) return;
+			img.src = "{{ route('captcha') }}?t=" + Date.now();
+			document.getElementById('captcha')?.focus();
+		}
+		document.getElementById('captchaImage')?.addEventListener('click', refreshCaptcha);
+		document.getElementById('refreshCaptcha')?.addEventListener('click', refreshCaptcha);
 	</script>
 </body>
 </html>

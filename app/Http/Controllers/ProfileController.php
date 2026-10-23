@@ -79,7 +79,7 @@ class ProfileController extends Controller
         }
 
         $request->validate([
-            'foto' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            'foto' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:20480'],
         ]);
 
         if ($employee->foto) {

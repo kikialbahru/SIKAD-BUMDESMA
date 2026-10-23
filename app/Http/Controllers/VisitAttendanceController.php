@@ -122,7 +122,7 @@ class VisitAttendanceController extends Controller
             'judul' => ['required', 'string', 'max:255'],
             'deskripsi' => ['nullable', 'string', 'max:2000'],
             'tanggal' => ['required', 'date', 'before_or_equal:today'],
-            'foto' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            'foto' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:20480'],
             'lintang' => ['required', 'numeric', 'between:-90,90'],
             'bujur' => ['required', 'numeric', 'between:-180,180'],
             'akurasi' => ['nullable', 'numeric', 'min:0', 'max:100000'],
@@ -181,7 +181,7 @@ class VisitAttendanceController extends Controller
             'judul' => ['required', 'string', 'max:255'],
             'deskripsi' => ['nullable', 'string', 'max:2000'],
             'tanggal' => ['required', 'date', 'before_or_equal:today'],
-            'foto' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            'foto' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:20480'],
         ], [
             // Locale aplikasi 'en' (tanpa lang/id) sehingga pesan bawaan berbahasa Inggris;
             // aturan tanggal kunci ini diberi pesan Indonesia eksplisit.

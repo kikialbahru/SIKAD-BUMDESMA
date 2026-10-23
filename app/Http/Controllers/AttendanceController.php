@@ -179,7 +179,7 @@ class AttendanceController extends Controller
     private function validatedEvidence(Request $request): array
     {
         $data = $request->validate([
-            'foto' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            'foto' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:20480'],
             'lintang' => ['required', 'numeric', 'between:-90,90'],
             'bujur' => ['required', 'numeric', 'between:-180,180'],
             'akurasi' => ['nullable', 'numeric', 'min:0', 'max:100000'],

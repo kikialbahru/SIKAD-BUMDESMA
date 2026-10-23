@@ -44,7 +44,7 @@ class EmployeeController extends Controller
             'tanggal_masuk' => ['required', 'date'],
             'gaji_pokok' => ['nullable', 'numeric', 'min:0'],
             'tunjangan_kehadiran' => ['nullable', 'numeric', 'min:0'],
-            'foto' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            'foto' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:20480'],
             'aktif' => ['sometimes', 'boolean'],
             'create_account' => ['nullable', 'boolean'],
             'hapus_foto' => ['nullable', 'boolean'],
@@ -167,7 +167,7 @@ class EmployeeController extends Controller
             'tanggal_masuk' => ['required', 'date'],
             'gaji_pokok' => ['nullable', 'numeric', 'min:0'],
             'tunjangan_kehadiran' => ['nullable', 'numeric', 'min:0'],
-            'foto' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            'foto' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:20480'],
             'aktif' => ['sometimes', 'boolean'],
         ]);
     }

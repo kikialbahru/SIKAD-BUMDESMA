@@ -6,6 +6,7 @@ use App\Http\Controllers\AttendanceCorrectionController;
 use App\Http\Controllers\AttendanceLocationController;
 use App\Http\Controllers\AttendanceSettingController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CaptchaController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\HolidayController;
@@ -35,6 +36,8 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
+
+Route::get('/captcha', [CaptchaController::class, 'image'])->name('captcha');
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'create'])->name('login');

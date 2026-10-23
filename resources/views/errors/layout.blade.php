@@ -40,7 +40,7 @@
                     <i class="bi bi-box-arrow-in-right me-2">
                     </i>Halaman Login</a>
             </div>
-            <p class="text-secondary small mt-4 mb-0">BUMDESMA LKD TARUB — Sistem Informasi Karyawan</p>
+            <p class="text-secondary small mt-4 mb-0">BUMDESMA LKD TARUB — Sistem Informasi Kehadiran</p>
         </div>
     </main>
 </body>

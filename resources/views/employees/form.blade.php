@@ -58,7 +58,7 @@
                             WEBP
                             —
                             maksimal
-                            2
+                            20
                             MB.
                             Preview
                             tampil

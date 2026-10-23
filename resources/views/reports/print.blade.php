@@ -185,7 +185,13 @@
     @endphp
     <table class="kop-table">
         <tr>
-            <td class="kop-logo"><img src="{{ public_path('images/logo-bumdesma.png') }}" alt="Logo"></td>
+            <td class="kop-logo">
+                @if (function_exists('imagecreatetruecolor') && file_exists(public_path('images/logo-bumdesma.png')))
+                    <img src="{{ public_path('images/logo-bumdesma.png') }}" alt="Logo">
+                @else
+                    <div style="width:52px;height:52px;border:2px solid #1e5aa8;border-radius:8px;color:#1e5aa8;font-weight:700;font-size:16px;text-align:center;line-height:48px;">BT</div>
+                @endif
+            </td>
             <td>
                 <h1>BUMDESMA LKD TARUB</h1>
                 <div class="kop-title">LAPORAN {{ strtoupper(str_replace('-', ' ', $filters['type'])) }}</div>

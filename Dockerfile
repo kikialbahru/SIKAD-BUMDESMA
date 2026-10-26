@@ -1,11 +1,11 @@
-# Railway memakai file ini (bukan auto-deteksi Railpack/Node) karena ada
+# Railway/VPS memakai file ini (bukan auto-deteksi Railpack/Node) karena ada
 # Dockerfile di root. `npm run build` TIDAK dijalankan — tidak ada Blade
 # yang memakai @vite (frontend murni Bootstrap CDN + inline script).
 FROM php:8.2-cli
 
 # Ekstensi PHP yang dibutuhkan Laravel 10 + dompdf + maatwebsite/excel
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        git unzip libpng-dev libzip-dev libonig-dev libxml2-dev \
+        git unzip default-mysql-client libpng-dev libzip-dev libonig-dev libxml2-dev \
     && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
